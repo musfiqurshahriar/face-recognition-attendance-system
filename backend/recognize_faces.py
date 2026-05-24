@@ -7,7 +7,7 @@ from datetime import datetime
 
 ENCODINGS_FILE = "../models/encodings.pkl"
 TOLERANCE = 0.5
-CURRENT_SEMESTER = "Spring 2024"
+CURRENT_SEMESTER = None
 
 print("[INFO] Encoding লোড হচ্ছে...")
 with open(ENCODINGS_FILE, "rb") as f:
@@ -64,7 +64,7 @@ while True:
             result = mark_attendance(
                 name=name,
                 role=role.rstrip("s"),
-                semester=CURRENT_SEMESTER
+                semester=None
             )
             if result == "duplicate":
                 status = "Already Marked"

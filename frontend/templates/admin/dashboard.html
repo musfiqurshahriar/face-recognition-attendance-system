@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>Dashboard — আজকের উপস্থিতি ({{ today }})</h2>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-number">{{ total_students }}</div>
+        <div class="stat-label">মোট Student</div>
+    </div>
+    <div class="stat-card present">
+        <div class="stat-number">{{ today_present }}</div>
+        <div class="stat-label">আজ উপস্থিত</div>
+    </div>
+    <div class="stat-card absent">
+        <div class="stat-number">{{ today_absent }}</div>
+        <div class="stat-label">আজ অনুপস্থিত</div>
+    </div>
+</div>
+
+<!-- Notification box -->
+<div class="notification-box">
+    <div>
+        <h3>📧 Absent Notification পাঠাও</h3>
+        <p>অনুপস্থিত সবার guardian কে email যাবে</p>
+    </div>
+    <form method="POST" action="{{ url_for('admin.send_notifications') }}"
+        style="display:flex; gap:10px; align-items:center">
+        <input type="date" name="date" value="{{ today }}" style="background:var(--bg-primary); border:1px solid var(--border);
+                      border-radius:8px; padding:7px 12px; color:var(--text-primary)">
+        <button type="submit" class="btn-danger" onclick="return confirm('অনুপস্থিত সবাইকে email পাঠাবো?')">
+            Email পাঠাও
+        </button>
+    </form>
+</div>
+
+<!-- Chart -->
+<div class="chart-box">
+    <h3>শেষ ৭ দিনের Attendance Trend</h3>
+    <canvas id="attendanceChart" height="80"></canvas>
+</div>
+
+<!-- Today Attendance List -->
+<h3>আজকের Attendance List</h3>
+<div style="border-left: 4px solid #34d399; border-radius: 8px; overflow: hidden;">
+    <table class="attendance-table">
+        <thead>
+            <tr>
+                <th>Roll</th>
+                <th>নাম</th>
+                <th>Role</th>
+                <th>Session</th>
+                <th>সময়</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in today_records %}
+            <tr>
+                <td>{{ r.roll_number or "—" }}</td>
+                <td>{{ r.name }}</td>
+                <td>{{ r.role }}</td>
+                <td>{{ r.section or "—" }}</td>
+                <td>{{ r.time }}</td>
+                <td>
+                    <span class="badge badge-{{ r.status.lower().replace(' ', '-') }}">
+                        {{ r.status }}
+                    </span>
+                </td>
+            </tr>
+            {% endfor %}
+            {% if not today_records %}
+            <tr>
+                <td colspan="6" style="text-align:center; color:var(--text-muted)">
+                    আজ কোনো attendance নেই
+                </td>
+            </tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Absent List -->
+{% if absent_students %}
+<div style="margin-top: 40px;">
+    <h3>আজ অনুপস্থিত ({{ absent_students|length }} জন)</h3>
+    <div class="absent-box" style="margin-top: 0;">
+        <div class="absent-grid">
+            {% for s in absent_students %}
+            <div class="absent-card">
+                <div class="absent-name">{{ s.name }}</div>
+                <div class="absent-roll">Roll: {{ s.roll }}</div>
+                <div class="absent-section">{{ s.section }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Low Attendance Alert -->
+{% if low_attendance %}
+<div style="margin-top: 40px;">
+    <h3>⚠️ Low Attendance Alert (৭০% এর নিচে)</h3>
+    <div class="alert-box" style="border-left: 4px solid #ef4444;">
+        <table class="attendance-table" style="margin-top: 0;">
+            <thead>
+                <tr>
+                    <th>Roll</th>
+                    <th>নাম</th>
+                    <th>Session</th>
+                    <th>উপস্থিত</th>
+                    <th>মোট</th>
+                    <th>Percentage</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in low_attendance %}
+                <tr>
+                    <td>{{ s.roll }}</td>
+                    <td>{{ s.name }}</td>
+                    <td>{{ s.section }}</td>
+                    <td>{{ s.present }}</td>
+                    <td>{{ s.total }}</td>
+                    <td>
+                        <span class="badge badge-late">{{ s.percentage }}%</span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const ctx = document.getElementById('attendanceChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: {{ chart_labels | tojson }},
+        datasets: [
+        {
+            label: 'উপস্থিত',
+            data: {{ chart_present | tojson }},
+        backgroundColor: 'rgba(52, 211, 153, 0.7)',
+        borderColor: '#34d399',
+        borderWidth: 1,
+        borderRadius: 6
+            },
+        {
+            label: 'অনুপস্থিত',
+            data: {{ chart_absent | tojson }},
+        backgroundColor: 'rgba(248, 113, 113, 0.7)',
+        borderColor: '#f87171',
+        borderWidth: 1,
+        borderRadius: 6
+            }
+    ]
+    },
+        options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                labels: { color: '#8892a4' }
+            }
+        },
+        scales: {
+            x: {
+                ticks: { color: '#8892a4' },
+                grid: { color: '#1e2535' }
+            },
+            y: {
+                ticks: { color: '#8892a4', stepSize: 1 },
+                grid: { color: '#1e2535' },
+                beginAtZero: true
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

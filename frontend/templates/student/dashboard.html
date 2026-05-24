@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>আমার Attendance — {{ current_user.name }}</h2>
+<p>Roll: {{ current_user.roll_number }} | Section: {{ current_user.section }}</p>
+
+<div class="stats-grid">
+    <div class="stat-card present">
+        <div class="stat-number">{{ percentage }}%</div>
+        <div class="stat-label">Attendance Percentage</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number">{{ present_count }} / {{ total_days }}</div>
+        <div class="stat-label">উপস্থিত / মোট ক্লাস</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number">{{ on_time }}</div>
+        <div class="stat-label">On Time</div>
+    </div>
+    <div class="stat-card absent">
+        <div class="stat-number">{{ late }}</div>
+        <div class="stat-label">Late</div>
+    </div>
+</div>
+
+<h3>বিস্তারিত রেকর্ড</h3>
+<div style="border-left: 4px solid #0ea5e9; border-radius: 8px; overflow: hidden; margin-top: 15px;">
+    <table class="attendance-table" style="margin-top: 0;">
+        <thead>
+            <tr>
+                <th>তারিখ</th>
+                <th>সময়</th>
+                <th>Status</th>
+                <th>Semester</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in records %}
+            <tr>
+                <td>{{ r.date }}</td>
+                <td>{{ r.time }}</td>
+                <td>
+                    <span class="badge badge-{{ r.status.lower().replace(' ', '-') }}">
+                        {{ r.status }}
+                    </span>
+                </td>
+                <td>{{ r.semester }}</td>
+            </tr>
+            {% endfor %}
+            {% if not records %}
+            <tr>
+                <td colspan="4" style="text-align:center; color:var(--text-muted)">
+                    এখনো কোনো attendance নেই
+                </td>
+            </tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

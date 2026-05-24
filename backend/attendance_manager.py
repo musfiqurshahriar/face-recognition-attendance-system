@@ -1,22 +1,18 @@
-from database import SessionLocal, Attendance, ClassSession, User
+from database import SessionLocal, Attendance, ClassSession, get_student_by_name
 from datetime import datetime
 
 LATE_THRESHOLD_MINUTES = 20
 
-def get_user_by_name(name):
-    db = SessionLocal()
-    user = db.query(User).filter(User.name == name).first()
-    db.close()
-    return user
 
-def is_duplicate(user_id, date):
+def is_duplicate(roll_number, date):
     db = SessionLocal()
     existing = db.query(Attendance).filter(
-        Attendance.user_id == user_id,
+        Attendance.roll_number == roll_number,
         Attendance.date == date
     ).first()
     db.close()
     return existing is not None
+
 
 def get_or_create_session(date, section):
     db = SessionLocal()
@@ -38,6 +34,7 @@ def get_or_create_session(date, section):
     db.close()
     return session
 
+
 def update_first_entry(date, section, time_str):
     db = SessionLocal()
     session = db.query(ClassSession).filter(
@@ -50,6 +47,7 @@ def update_first_entry(date, section, time_str):
         db.commit()
 
     db.close()
+
 
 def calculate_status(role, section, date, current_time_str):
     if role == "teacher":
@@ -66,42 +64,45 @@ def calculate_status(role, section, date, current_time_str):
     current_time = datetime.strptime(current_time_str, fmt)
     diff_minutes = (current_time - first_time).total_seconds() / 60
 
-    if diff_minutes <= LATE_THRESHOLD_MINUTES:
-        return "On Time"
-    else:
-        return "Late"
+    return "On Time" if diff_minutes <= LATE_THRESHOLD_MINUTES else "Late"
+
 
 def mark_attendance(name, role, section=None, semester=None):
     now = datetime.now()
     date_str = now.strftime("%Y-%m-%d")
     time_str = now.strftime("%H:%M:%S")
 
-    user = get_user_by_name(name)
+    # Excel থেকে student info নাও
+    student = get_student_by_name(name)
 
-    if user is None:
-        print(f"[WARNING] {name} — database এ নেই")
+    if student is None:
+        print(f"[WARNING] {name} — Excel এ নেই")
         return None
 
-    if is_duplicate(user.id, date_str):
+    roll = student["roll"]
+    sec = section or student["section"]
+    sem = student.get("semester", "") or semester or ""
+
+    if is_duplicate(roll, date_str):
         return "duplicate"
 
-    status = calculate_status(role, section or user.section, date_str, time_str)
+    status = calculate_status(role, sec, date_str, time_str)
 
     db = SessionLocal()
     record = Attendance(
-        user_id=user.id,
+        user_id=roll,
         name=name,
         role=role,
-        roll_number=user.roll_number,
-        section=section or user.section,
+        roll_number=roll,
+        section=sec,
         date=date_str,
         time=time_str,
         status=status,
-        semester=semester or "Default"
+        semester=sem
     )
     db.add(record)
     db.commit()
     db.close()
 
-    print(f"[ATTENDANCE] Roll: {user.roll_number} | {name} | {status} | {date_str} {time_str}")
+    print(f"[ATTENDANCE] Roll: {roll} | {name} | {status} | {date_str} {time_str}")
     return status
