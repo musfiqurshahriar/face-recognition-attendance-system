@@ -1,73 +1,59 @@
 {% extends "base.html" %}
 {% block content %}
-
 <h2>Attendance Records</h2>
 
-<!-- Stats Card for Total Records -->
-<div class="stats-grid" style="margin-bottom: 20px;">
-    <div class="stat-card">
-        <div class="stat-number">{{ records|length }}</div>
-        <div class="stat-label">মোট রেকর্ড</div>
-    </div>
-</div>
+<form method="GET" class="filter-form">
+    <input type="date" name="date_from" value="{{ date_from }}">
+    <input type="date" name="date_to" value="{{ date_to }}">
+    <select name="section">
+        <option value="">সব Session</option>
+        {% for s in sections %}
+        <option value="{{ s }}" {% if s==selected_section %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+    </select>
+    <select name="semester">
+        <option value="">সব Semester</option>
+        {% for s in semesters %}
+        <option value="{{ s }}" {% if s==selected_semester %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+    </select>
+    <button type="submit" class="btn-primary">Filter</button>
+    <a href="{{ url_for('admin.export_excel', section=selected_section, semester=selected_semester, date_from=date_from, date_to=date_to) }}"
+        class="btn-success">Download Attendance</a>
+</form>
 
-<!-- Filter Box -->
-<div class="notification-box" style="margin-bottom: 30px;">
-    <div style="margin-bottom: 15px;">
-        <h3>🔍 Filter Records</h3>
-        <p>তারিখ, Session বা Semester অনুযায়ী ডাটা খুঁজুন ও Excel ডাউনলোড করুন</p>
-    </div>
-    <form method="GET" style="display:flex; gap:10px; align-items:center; flex-wrap: wrap;">
-        <input type="date" name="date_from" value="{{ date_from }}" title="শুরুর তারিখ"
-            style="background:var(--bg-primary); border:1px solid var(--border); border-radius:8px; padding:7px 12px; color:var(--text-primary)">
+<p style="color:var(--text-muted);font-size:13px;margin-bottom:16px">
+    মোট রেকর্ড: <strong style="color:var(--text-primary)">{{ records|length }}</strong>
+</p>
 
-        <input type="date" name="date_to" value="{{ date_to }}" title="শেষের তারিখ"
-            style="background:var(--bg-primary); border:1px solid var(--border); border-radius:8px; padding:7px 12px; color:var(--text-primary)">
-
-        <select name="section"
-            style="background:var(--bg-primary); border:1px solid var(--border); border-radius:8px; padding:7px 12px; color:var(--text-primary)">
-            <option value="">সব Session</option>
-            {% for s in sections %}
-            <option value="{{ s }}" {% if s==selected_section %}selected{% endif %}>{{ s }}</option>
-            {% endfor %}
-        </select>
-
-        <select name="semester"
-            style="background:var(--bg-primary); border:1px solid var(--border); border-radius:8px; padding:7px 12px; color:var(--text-primary)">
-            <option value="">সব Semester</option>
-            {% for s in semesters %}
-            <option value="{{ s }}" {% if s==selected_semester %}selected{% endif %}>{{ s }}</option>
-            {% endfor %}
-        </select>
-
-        <button type="submit" class="btn-primary" style="padding: 8px 16px;">Filter</button>
-        <a href="{{ url_for('admin.export_excel', section=selected_section, semester=selected_semester) }}"
-            class="btn-success" style="padding: 8px 16px; text-decoration: none;">Excel Download</a>
-    </form>
-</div>
-
-<!-- Attendance List Table -->
-<h3>বিস্তারিত Attendance List</h3>
-<div style="border-left: 4px solid #3b82f6; border-radius: 8px; overflow: hidden; margin-top: 15px;">
-    <table class="attendance-table" style="margin-top: 0;">
+<div class="table-wrap">
+    <table class="attendance-table">
         <thead>
             <tr>
+                <th>তারিখ</th>
                 <th>Roll</th>
                 <th>নাম</th>
                 <th>Session</th>
-                <th>তারিখ</th>
                 <th>সময়</th>
                 <th>Status</th>
                 <th>Semester</th>
             </tr>
         </thead>
         <tbody>
+            {% set current_date = namespace(value="") %}
             {% for r in records %}
+            {% if r.date != current_date.value %}
+            {% set current_date.value = r.date %}
+            <tr class="date-separator">
+                <td><span class="date-label">{{ r.date }}</span></td>
+                <td colspan="6"></td>
+            </tr>
+            {% endif %}
             <tr>
+                <td></td>
                 <td>{{ r.roll_number }}</td>
                 <td>{{ r.name }}</td>
                 <td>{{ r.section }}</td>
-                <td>{{ r.date }}</td>
                 <td>{{ r.time }}</td>
                 <td>
                     <span class="badge badge-{{ r.status.lower().replace(' ', '-') }}">
@@ -79,7 +65,7 @@
             {% endfor %}
             {% if not records %}
             <tr>
-                <td colspan="7" style="text-align:center; color:var(--text-muted)">
+                <td colspan="7" style="text-align:center;color:var(--text-muted)">
                     কোনো রেকর্ড নেই
                 </td>
             </tr>
@@ -87,5 +73,4 @@
         </tbody>
     </table>
 </div>
-
 {% endblock %}

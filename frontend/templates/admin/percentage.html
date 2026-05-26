@@ -29,7 +29,8 @@
         <button type="submit" class="btn-primary" style="padding: 8px 16px;">Filter</button>
     </form>
 </div>
-
+<a href="{{ url_for('admin.export_percentage', section=selected_section, semester=selected_semester) }}"
+    class="btn-success">Download Percentage</a>
 <!-- Percentage List Table -->
 <h3>উপস্থিতির হার (Percentage List)</h3>
 <div style="border-left: 4px solid #8b5cf6; border-radius: 8px; overflow: hidden; margin-top: 15px;">

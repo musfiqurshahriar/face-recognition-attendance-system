@@ -116,9 +116,9 @@ def attendance():
         query = query.filter(Attendance.semester == semester)
 
     records = query.order_by(
-        Attendance.section.desc(),
-        Attendance.roll_number,
-        Attendance.date
+    Attendance.date,
+    Attendance.section.desc(),
+    Attendance.roll_number
     ).all()
 
     students_list = load_students_from_excel()
@@ -202,9 +202,14 @@ def percentage():
 @login_required
 @admin_required
 def export_excel():
+    from openpyxl.styles import PatternFill, Font, Alignment
+    from openpyxl.utils import get_column_letter
+
     db = SessionLocal()
     section = request.args.get("section", "")
     semester = request.args.get("semester", "")
+    date_from = request.args.get("date_from", "")
+    date_to = request.args.get("date_to", "")
 
     s_query = db.query(Attendance).filter(Attendance.role == "student")
     t_query = db.query(Attendance).filter(Attendance.role == "teacher")
@@ -214,27 +219,60 @@ def export_excel():
     if semester:
         s_query = s_query.filter(Attendance.semester == semester)
         t_query = t_query.filter(Attendance.semester == semester)
+    if date_from:
+        s_query = s_query.filter(Attendance.date >= date_from)
+        t_query = t_query.filter(Attendance.date >= date_from)
+    if date_to:
+        s_query = s_query.filter(Attendance.date <= date_to)
+        t_query = t_query.filter(Attendance.date <= date_to)
 
     s_records = s_query.order_by(
+        Attendance.date,
         Attendance.section.desc(),
-        Attendance.roll_number,
-        Attendance.date
+        Attendance.roll_number
     ).all()
     t_records = t_query.order_by(Attendance.name, Attendance.date).all()
     db.close()
 
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
-        s_data = [{
-            "Roll": r.roll_number,
-            "Name": r.name,
-            "Session": r.section,
-            "Date": r.date,
-            "Time": r.time,
-            "Status": r.status,
-            "Semester": r.semester
-        } for r in s_records]
-        pd.DataFrame(s_data).to_excel(writer, sheet_name="Students", index=False)
+
+        wb = writer.book
+        ws = wb.create_sheet("Students")
+
+        headers = ["Date", "Roll", "Name", "Session", "Time", "Status", "Semester"]
+        ws.append(headers)
+
+        header_fill = PatternFill(start_color="2C3E50", end_color="2C3E50", fill_type="solid")
+        header_font = Font(color="FFFFFF", bold=True)
+        for col in range(1, len(headers) + 1):
+            cell = ws.cell(row=1, column=col)
+            cell.fill = header_fill
+            cell.font = header_font
+
+        current_date = None
+        row_num = 2
+
+        for r in s_records:
+            if r.date != current_date:
+                current_date = r.date
+                date_cell = ws.cell(row=row_num, column=1, value=r.date)
+                date_cell.font = Font(bold=True, size=12, color="000000")
+                date_cell.fill = PatternFill(start_color="E8E4FF", end_color="E8E4FF", fill_type="solid")
+                ws.row_dimensions[row_num].height = 20
+                row_num += 1
+
+            ws.cell(row=row_num, column=1, value="")
+            ws.cell(row=row_num, column=2, value=r.roll_number)
+            ws.cell(row=row_num, column=3, value=r.name)
+            ws.cell(row=row_num, column=4, value=r.section)
+            ws.cell(row=row_num, column=5, value=r.time)
+            ws.cell(row=row_num, column=6, value=r.status)
+            ws.cell(row=row_num, column=7, value=r.semester)
+            row_num += 1
+
+        for col in range(1, len(headers) + 1):
+            ws.column_dimensions[get_column_letter(col)].width = 18
 
         t_data = [{
             "Name": r.name,
@@ -245,7 +283,8 @@ def export_excel():
         pd.DataFrame(t_data).to_excel(writer, sheet_name="Teachers", index=False)
 
     output.seek(0)
-    return send_file(output,
+    return send_file(
+        output,
         download_name="attendance_report.xlsx",
         as_attachment=True,
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -335,3 +374,89 @@ def change_password():
         return redirect(url_for("admin.dashboard"))
 
     return render_template("admin/change_password.html")
+
+@admin_bp.route("/export/percentage")
+@login_required
+@admin_required
+def export_percentage():
+    from openpyxl.styles import PatternFill, Font
+    from openpyxl.utils import get_column_letter
+
+    db = SessionLocal()
+    section = request.args.get("section", "")
+    semester = request.args.get("semester", "")
+
+    all_students = load_students_from_excel()
+    if section:
+        students = [s for s in all_students if s.get("section") == section]
+    else:
+        students = all_students
+
+    def session_sort_key(s):
+        session = s.get("section", "0-0")
+        try:
+            first_year = int(session.split("-")[0])
+        except:
+            first_year = 0
+        return (-first_year, s.get("roll", ""))
+
+    students = sorted(students, key=session_sort_key)
+
+    total_days = db.query(Attendance.date).filter(
+        Attendance.role == "student"
+    ).distinct().count()
+
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        wb = writer.book
+        ws = wb.create_sheet("Percentage")
+
+        headers = ["Roll", "Name", "Session", "Present", "Total Class", "Percentage"]
+        ws.append(headers)
+
+        header_fill = PatternFill(start_color="2C3E50", end_color="2C3E50", fill_type="solid")
+        header_font = Font(color="FFFFFF", bold=True)
+        for col in range(1, len(headers) + 1):
+            cell = ws.cell(row=1, column=col)
+            cell.fill = header_fill
+            cell.font = header_font
+
+        for student in students:
+            student_roll = student.get("roll")
+            count_query = db.query(Attendance).filter(
+                Attendance.role == "student",
+                Attendance.roll_number == student_roll
+            )
+            if semester:
+                count_query = count_query.filter(Attendance.semester == semester)
+            present_count = count_query.count()
+            percentage = round((present_count / total_days * 100), 1) if total_days > 0 else 0
+
+            row = [
+                student_roll,
+                student.get("name"),
+                student.get("section"),
+                present_count,
+                total_days,
+                f"{percentage}%"
+            ]
+            ws.append(row)
+
+            # ৭০% এর নিচে হলে লাল রং
+            if percentage < 70:
+                for col in range(1, len(headers) + 1):
+                    ws.cell(row=ws.max_row, column=col).fill = PatternFill(
+                        start_color="FDECEA", end_color="FDECEA", fill_type="solid"
+                    )
+
+        for col in range(1, len(headers) + 1):
+            ws.column_dimensions[get_column_letter(col)].width = 18
+
+    db.close()
+    output.seek(0)
+    return send_file(
+        output,
+        download_name="attendance_percentage.xlsx",
+        as_attachment=True,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )

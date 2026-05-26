@@ -1,4 +1,8 @@
-* { margin: 0; padding: 0; box-sizing: border-box; }
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
 
 :root {
     --bg-primary: #0f1117;
@@ -75,6 +79,12 @@ body {
     transition: all 0.2s;
 }
 
+.nav-links a.nav-active {
+    color: #fff;
+    background: var(--accent);
+    border-radius: 8px;
+}
+
 .nav-links a:hover {
     color: var(--text-primary);
     background: var(--bg-card);
@@ -103,8 +113,15 @@ body {
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(8px); }
-    to   { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* Page title */
@@ -155,13 +172,20 @@ h3 {
 .stat-card::before {
     content: '';
     position: absolute;
-    top: 0; left: 0; right: 0;
+    top: 0;
+    left: 0;
+    right: 0;
     height: 2px;
     background: var(--accent);
 }
 
-.stat-card.present::before { background: var(--success); }
-.stat-card.absent::before  { background: var(--danger); }
+.stat-card.present::before {
+    background: var(--success);
+}
+
+.stat-card.absent::before {
+    background: var(--danger);
+}
 
 .stat-number {
     font-size: 32px;
@@ -191,11 +215,11 @@ h3 {
 
 .attendance-table th {
     background: var(--bg-card);
-    color: var(--text-muted);
+    color: var(--text-primary);
     padding: 12px 16px;
     text-align: left;
-    font-size: 11px;
-    font-weight: 500;
+    font-size: 13px;
+    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     border-bottom: 1px solid var(--border);
@@ -209,8 +233,13 @@ h3 {
     transition: background 0.15s;
 }
 
-.attendance-table tr:last-child td { border-bottom: none; }
-.attendance-table tbody tr:hover td { background: var(--bg-card); }
+.attendance-table tr:last-child td {
+    border-bottom: none;
+}
+
+.attendance-table tbody tr:hover td {
+    background: var(--bg-card);
+}
 
 /* Badges */
 .badge {
@@ -271,7 +300,9 @@ h3 {
     border-color: var(--accent);
 }
 
-.filter-form select option { background: var(--bg-secondary); }
+.filter-form select option {
+    background: var(--bg-secondary);
+}
 
 /* Buttons */
 .btn-primary {
@@ -484,10 +515,22 @@ h3 {
 }
 
 /* Scrollbar */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: var(--bg-primary); }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #2e3650; }
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-primary);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #2e3650;
+}
 
 /* Chart */
 .chart-box {
@@ -565,4 +608,101 @@ h3 {
     color: var(--accent);
     font-size: 11px;
     margin-top: 2px;
+}
+
+.date-separator td {
+    background: transparent !important;
+    padding: 12px 16px 4px !important;
+    border: none !important;
+    border-top: 2px solid var(--border) !important;
+}
+
+.date-label {
+    color: var(--text-primary);
+    font-size: 16px;
+    font-weight: 700;
+    display: block;
+    text-align: left;
+    padding-left: 0;
+}
+
+/* =========================================================
+   Responsive Design (Media Queries)
+========================================================= */
+@media (max-width: 768px) {
+
+    /* Navbar: মোবাইলে মেনুগুলো নিচে নিচে বা সুন্দরভাবে সাজানো থাকবে */
+    .navbar {
+        flex-direction: column;
+        gap: 12px;
+        padding: 12px 16px;
+    }
+
+    .nav-links {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 8px;
+    }
+
+    /* Container: স্ক্রিনের দুপাশের প্যাডিং কমানো হয়েছে */
+    .container {
+        padding: 0 12px;
+        margin: 16px auto;
+    }
+
+    /* Notification Box: মোবাইলে লেখা এবং বাটন নিচে নিচে থাকবে */
+    .notification-box {
+        flex-direction: column;
+        align-items: flex-start;
+        text-align: left;
+    }
+
+    .notification-box form {
+        width: 100%;
+        flex-direction: column;
+        align-items: stretch !important;
+    }
+
+    .notification-box button {
+        width: 100%;
+    }
+
+    /* Stats Grid: মোবাইলে কার্ডগুলো পারফেক্ট সাইজে থাকবে */
+    .stats-grid {
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    }
+
+    /* Table: মোবাইলে টেবিলটি ভেঙে না গিয়ে স্ক্রল করা যাবে */
+    .attendance-table {
+        display: block;
+        max-width: 100%;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+
+    /* Fonts: ছোট স্ক্রিনের জন্য ফন্ট সাইজ মানানসই করা হয়েছে */
+    h2 {
+        font-size: 18px;
+    }
+
+    h3 {
+        font-size: 14px;
+    }
+
+    .stat-number {
+        font-size: 26px;
+    }
+}
+
+@media (max-width: 480px) {
+
+    /* খুব ছোট মোবাইলের জন্য (যেমন iPhone SE) */
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .nav-links a {
+        font-size: 12px;
+        padding: 6px 10px;
+    }
 }
