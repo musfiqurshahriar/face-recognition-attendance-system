@@ -576,7 +576,7 @@ h3 {
 
 .absent-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
     gap: 10px;
 }
 
@@ -704,5 +704,28 @@ h3 {
     .nav-links a {
         font-size: 12px;
         padding: 6px 10px;
+    }
+}
+@media (max-width: 768px) {
+    .filter-form {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .filter-form input,
+    .filter-form select,
+    .filter-form button,
+    .filter-form a {
+        width: 100%;
+        text-align: center;
+    }
+
+    .login-box {
+        padding: 24px 16px;
+        margin: 0 12px;
+    }
+
+    .absent-grid {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
     }
 }
