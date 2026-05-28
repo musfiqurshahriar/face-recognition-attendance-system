@@ -1,40 +1,37 @@
 {% extends "base.html" %}
 {% block content %}
+<h2>Student Attendance Percentage</h2>
 
-<h2>Attendance Percentage</h2>
-
-<!-- Filter Box -->
-<div class="notification-box" style="margin-bottom: 30px;">
-    <div style="margin-bottom: 15px;">
+<div class="notification-box" style="margin-bottom: 24px;">
+    <div>
         <h3>📊 Filter Percentage</h3>
         <p>Session বা Semester অনুযায়ী স্টুডেন্টদের উপস্থিতির হার দেখুন</p>
     </div>
-    <form method="GET" style="display:flex; gap:10px; align-items:center; flex-wrap: wrap;">
-        <select name="section"
-            style="background:var(--bg-primary); border:1px solid var(--border); border-radius:8px; padding:7px 12px; color:var(--text-primary)">
+    <form method="GET" class="filter-form" style="margin-bottom: 0;">
+        <select name="section">
             <option value="">সব Session</option>
             {% for s in sections %}
             <option value="{{ s }}" {% if s==selected_section %}selected{% endif %}>{{ s }}</option>
             {% endfor %}
         </select>
-
-        <select name="semester"
-            style="background:var(--bg-primary); border:1px solid var(--border); border-radius:8px; padding:7px 12px; color:var(--text-primary)">
+        <select name="semester">
             <option value="">সব Semester</option>
             {% for s in semesters %}
             <option value="{{ s }}" {% if s==selected_semester %}selected{% endif %}>{{ s }}</option>
             {% endfor %}
         </select>
-
-        <button type="submit" class="btn-primary" style="padding: 8px 16px;">Filter</button>
+        <button type="submit" class="btn-primary" style="padding: 8px 24px;">Filter</button>
     </form>
 </div>
-<a href="{{ url_for('admin.export_percentage', section=selected_section, semester=selected_semester) }}"
-    class="btn-success">Download Percentage</a>
-<!-- Percentage List Table -->
-<h3>উপস্থিতির হার (Percentage List)</h3>
-<div style="border-left: 4px solid #8b5cf6; border-radius: 8px; overflow: hidden; margin-top: 15px;">
-    <table class="attendance-table" style="margin-top: 0;">
+
+<div style="margin-bottom: 20px;">
+    <a href="{{ url_for('admin.export_percentage', section=selected_section, semester=selected_semester) }}"
+        class="btn-success">Download Percentage</a>
+</div>
+
+<h3>শিক্ষার্থী উপস্থিতির হার (Student Attendance Percentage)</h3>
+<div class="table-wrap">
+    <table class="attendance-table">
         <thead>
             <tr>
                 <th>Roll</th>
@@ -54,21 +51,21 @@
                 <td>{{ r.present }}</td>
                 <td>{{ r.total }}</td>
                 <td>
-                    <span class="badge {% if r.percentage >= 75 %}badge-on-time{% else %}badge-late{% endif %}">
-                        {{ r.percentage }}%
-                    </span>
+                    {% if r.percentage < 70 %} <span class="badge badge-late">{{ r.percentage }}%</span>
+                        {% else %}
+                        <span class="badge badge-on-time">{{ r.percentage }}%</span>
+                        {% endif %}
                 </td>
             </tr>
             {% endfor %}
             {% if not result %}
             <tr>
-                <td colspan="6" style="text-align:center; color:var(--text-muted)">
-                    কোনো ডাটা পাওয়া যায়নি
+                <td colspan="6" style="text-align:center;color:var(--text-muted)">
+                    কোনো স্টুডেন্ট পাওয়া যায়নি
                 </td>
             </tr>
             {% endif %}
         </tbody>
     </table>
 </div>
-
 {% endblock %}

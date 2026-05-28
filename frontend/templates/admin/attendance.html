@@ -5,72 +5,167 @@
 <form method="GET" class="filter-form">
     <input type="date" name="date_from" value="{{ date_from }}">
     <input type="date" name="date_to" value="{{ date_to }}">
-    <select name="section">
-        <option value="">সব Session</option>
+    <select name="section" id="section-filter">
+        <option value="">All Session</option>
         {% for s in sections %}
         <option value="{{ s }}" {% if s==selected_section %}selected{% endif %}>{{ s }}</option>
         {% endfor %}
     </select>
-    <select name="semester">
-        <option value="">সব Semester</option>
+    <select name="semester" id="semester-filter">
+        <option value="">All Semester</option>
         {% for s in semesters %}
         <option value="{{ s }}" {% if s==selected_semester %}selected{% endif %}>{{ s }}</option>
         {% endfor %}
     </select>
     <button type="submit" class="btn-primary">Filter</button>
-    <a href="{{ url_for('admin.export_excel', section=selected_section, semester=selected_semester, date_from=date_from, date_to=date_to) }}"
-        class="btn-success">Download Attendance</a>
+
+    <a href="#" id="download-btn" class="btn-success">Download Student Data</a>
 </form>
 
-<p style="color:var(--text-muted);font-size:13px;margin-bottom:16px">
-    মোট রেকর্ড: <strong style="color:var(--text-primary)">{{ records|length }}</strong>
-</p>
-
-<div class="table-wrap">
-    <table class="attendance-table">
-        <thead>
-            <tr>
-                <th>তারিখ</th>
-                <th>Roll</th>
-                <th>নাম</th>
-                <th>Session</th>
-                <th>সময়</th>
-                <th>Status</th>
-                <th>Semester</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% set current_date = namespace(value="") %}
-            {% for r in records %}
-            {% if r.date != current_date.value %}
-            {% set current_date.value = r.date %}
-            <tr class="date-separator">
-                <td><span class="date-label">{{ r.date }}</span></td>
-                <td colspan="6"></td>
-            </tr>
-            {% endif %}
-            <tr>
-                <td></td>
-                <td>{{ r.roll_number }}</td>
-                <td>{{ r.name }}</td>
-                <td>{{ r.section }}</td>
-                <td>{{ r.time }}</td>
-                <td>
-                    <span class="badge badge-{{ r.status.lower().replace(' ', '-') }}">
-                        {{ r.status }}
-                    </span>
-                </td>
-                <td>{{ r.semester }}</td>
-            </tr>
-            {% endfor %}
-            {% if not records %}
-            <tr>
-                <td colspan="7" style="text-align:center;color:var(--text-muted)">
-                    কোনো রেকর্ড নেই
-                </td>
-            </tr>
-            {% endif %}
-        </tbody>
-    </table>
+<div class="tabs-container" style="margin-top: 30px;">
+    <button class="tab-btn active" onclick="switchRecordTab(event, 'student-records', 'student')">👨‍🎓 Students ({{
+        student_records|length }})</button>
+    <button class="tab-btn" onclick="switchRecordTab(event, 'teacher-records', 'teacher')">🧑‍🏫 Teachers ({{
+        teacher_records|length }})</button>
 </div>
+
+<div id="student-records" class="record-tab-content active" style="display: block;">
+    <div class="table-wrap">
+        <table class="attendance-table" style="border-left: 4px solid var(--success);">
+            <thead>
+                <tr>
+                    <th>তারিখ</th>
+                    <th>Roll</th>
+                    <th>নাম</th>
+                    <th>Session</th>
+                    <th>সময়</th>
+                    <th>Status</th>
+                    <th>Semester</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% set current_date = namespace(value="") %}
+                {% for r in student_records %}
+                {% if r.date != current_date.value %}
+                {% set current_date.value = r.date %}
+                <tr class="date-separator">
+                    <td><span class="date-label">{{ r.date }}</span></td>
+                    <td colspan="6"></td>
+                </tr>
+                {% endif %}
+                <tr>
+                    <td></td>
+                    <td>{{ r.roll_number }}</td>
+                    <td>{{ r.name }}</td>
+                    <td>{{ r.section }}</td>
+                    <td>{{ r.time }}</td>
+                    <td>
+                        <span class="badge badge-{{ r.status.lower().replace(' ', '-') }}">
+                            {{ r.status }}
+                        </span>
+                    </td>
+                    <td>{{ r.semester }}</td>
+                </tr>
+                {% endfor %}
+                {% if not student_records %}
+                <tr>
+                    <td colspan="7" style="text-align:center;color:var(--text-muted)">
+                        কোনো ছাত্রের রেকর্ড নেই
+                    </td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div id="teacher-records" class="record-tab-content" style="display: none;">
+    <div class="table-wrap">
+        <table class="attendance-table" style="border-left: 4px solid #8b5cf6;">
+            <thead>
+                <tr>
+                    <th>তারিখ</th>
+                    <th>নাম</th>
+                    <th>পদবি (Designation)</th>
+                    <th>সময়</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% set current_date_t = namespace(value="") %}
+                {% for r in teacher_records %}
+                {% if r.date != current_date_t.value %}
+                {% set current_date_t.value = r.date %}
+                <tr class="date-separator">
+                    <td><span class="date-label">{{ r.date }}</span></td>
+                    <td colspan="4"></td>
+                </tr>
+                {% endif %}
+                <tr>
+                    <td></td>
+                    <td>{{ r.name }}</td>
+                    <td><span style="color: var(--warning)">{{ r.section }}</span></td>
+                    <td>{{ r.time }}</td>
+                    <td><span class="badge badge-on-time">Present</span></td>
+                </tr>
+                {% endfor %}
+                {% if not teacher_records %}
+                <tr>
+                    <td colspan="5" style="text-align:center;color:var(--text-muted)">
+                        কোনো শিক্ষকের রেকর্ড নেই
+                    </td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    // Base URL for download
+    const baseUrl = "{{ url_for('admin.export_excel') }}";
+    const dateFrom = "{{ date_from }}";
+    const dateTo = "{{ date_to }}";
+    const selectedSection = "{{ selected_section }}";
+    const selectedSemester = "{{ selected_semester }}";
+
+    function updateDownloadLink(type) {
+        const btn = document.getElementById('download-btn');
+        let url = `${baseUrl}?type=${type}`;
+        if (dateFrom) url += `&date_from=${dateFrom}`;
+        if (dateTo) url += `&date_to=${dateTo}`;
+        if (selectedSection && type === 'student') url += `&section=${selectedSection}`;
+        if (selectedSemester && type === 'student') url += `&semester=${selectedSemester}`;
+
+        btn.href = url;
+        btn.innerHTML = `Download ${type.charAt(0).toUpperCase() + type.slice(1)} Data`;
+    }
+
+    function switchRecordTab(evt, tabId, type) {
+        var tabContents = document.getElementsByClassName("record-tab-content");
+        for (var i = 0; i < tabContents.length; i++) {
+            tabContents[i].classList.remove("active");
+            tabContents[i].style.display = "none";
+        }
+
+        var tabButtons = document.getElementsByClassName("tab-btn");
+        for (var i = 0; i < tabButtons.length; i++) {
+            tabButtons[i].classList.remove("active");
+        }
+
+        document.getElementById(tabId).classList.add("active");
+        document.getElementById(tabId).style.display = "block";
+        evt.currentTarget.classList.add("active");
+
+        // Disable section/semester filters when Teacher tab is active
+        document.getElementById('section-filter').disabled = (type === 'teacher');
+        document.getElementById('semester-filter').disabled = (type === 'teacher');
+
+        // Update download link
+        updateDownloadLink(type);
+    }
+
+    // Set initial link
+    updateDownloadLink('student');
+</script>
 {% endblock %}

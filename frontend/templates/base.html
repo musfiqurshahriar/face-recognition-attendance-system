@@ -12,7 +12,10 @@
     {% if current_user.is_authenticated %}
     <nav class="navbar">
         <div class="nav-brand">👤 Face Recognition Attendance System</div>
-        <div class="nav-links">
+
+        <button class="hamburger" onclick="toggleMenu()" id="hamburger">☰</button>
+
+        <div class="nav-links" id="nav-links">
             {% if current_user.role in ['admin', 'teacher'] %}
             <a href="{{ url_for('admin.dashboard') }}"
                 class="{{ 'nav-active' if request.endpoint == 'admin.dashboard' else '' }}">Dashboard</a>
@@ -26,9 +29,12 @@
                 class="{{ 'nav-active' if request.endpoint == 'admin.upload_students' else '' }}">Student List</a>
             <a href="{{ url_for('admin.change_password') }}"
                 class="{{ 'nav-active' if request.endpoint == 'admin.change_password' else '' }}">Change Password</a>
-            {% else %}
+            {% elif current_user.role == 'student' %}
             <a href="{{ url_for('student.dashboard') }}"
                 class="{{ 'nav-active' if request.endpoint == 'student.dashboard' else '' }}">আমার Attendance</a>
+            {% elif current_user.role == 'teacher' %}
+            <a href="{{ url_for('teacher.dashboard') }}"
+                class="{{ 'nav-active' if request.endpoint == 'teacher.dashboard' else '' }}">আমার Dashboard</a>
             {% endif %}
             <a href="{{ url_for('auth.logout') }}" class="logout-btn">Logout</a>
         </div>
@@ -44,6 +50,25 @@
 
         {% block content %}{% endblock %}
     </div>
+
+    <script>
+        function toggleMenu() {
+            const nav = document.getElementById('nav-links');
+            const btn = document.getElementById('hamburger');
+            nav.classList.toggle('open');
+            btn.textContent = nav.classList.contains('open') ? '✕' : '☰';
+        }
+
+        // অন্য জায়গায় click করলে menu বন্ধ হবে
+        document.addEventListener('click', function (e) {
+            const nav = document.getElementById('nav-links');
+            const btn = document.getElementById('hamburger');
+            if (nav && btn && !nav.contains(e.target) && !btn.contains(e.target)) {
+                nav.classList.remove('open');
+                btn.textContent = '☰';
+            }
+        });
+    </script>
 </body>
 
 </html>

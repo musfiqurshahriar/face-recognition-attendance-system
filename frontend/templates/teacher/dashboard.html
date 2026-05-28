@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>স্বাগতম, {{ current_user.name }}</h2>
+<p class="page-sub">{{ current_user.designation }} — {{ current_user.department }}</p>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-number">{{ total_classes }}</div>
+        <div class="stat-label">মোট ক্লাস নেওয়া হয়েছে</div>
+    </div>
+    <div class="stat-card present">
+        <div class="stat-number">{{ monthly_count }}</div>
+        <div class="stat-label">এই মাসে ক্লাস</div>
+    </div>
+</div>
+
+<h3>Attendance Record</h3>
+<div class="table-wrap">
+    <table class="attendance-table">
+        <thead>
+            <tr>
+                <th>তারিখ</th>
+                <th>সময়</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in records %}
+            <tr>
+                <td>{{ r.date }}</td>
+                <td>{{ r.time }}</td>
+                <td>
+                    <span class="badge badge-present">{{ r.status }}</span>
+                </td>
+            </tr>
+            {% endfor %}
+            {% if not records %}
+            <tr>
+                <td colspan="3" style="text-align:center;color:var(--text-muted)">
+                    এখনো কোনো attendance নেই
+                </td>
+            </tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

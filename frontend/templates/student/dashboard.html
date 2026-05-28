@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 <h2>আমার Attendance — {{ current_user.name }}</h2>
-<p>Roll: {{ current_user.roll_number }} | Section: {{ current_user.section }}</p>
+<p class="page-sub">Roll: {{ current_user.roll_number }} | Section: {{ current_user.section }}</p>
 
 <div class="stats-grid">
     <div class="stat-card present">
@@ -22,8 +22,18 @@
     </div>
 </div>
 
-<h3>বিস্তারিত রেকর্ড</h3>
-<div style="border-left: 4px solid #0ea5e9; border-radius: 8px; overflow: hidden; margin-top: 15px;">
+<div class="chart-box" style="margin-top: 30px;">
+    <h3 style="text-align: center; margin-bottom: 20px;">সেমিস্টার উপস্থিতির গ্রাফ (Semester Overview)</h3>
+    <div style="max-width: 300px; margin: 0 auto; position: relative;">
+        <canvas id="studentAttendanceChart"></canvas>
+        <div style="position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); text-align: center;">
+            <span style="font-size: 24px; font-weight: bold; color: var(--text-primary);">{{ percentage }}%</span>
+        </div>
+    </div>
+</div>
+
+<h3 style="margin-top: 40px;">বিস্তারিত রেকর্ড</h3>
+<div style="border-left: 4px solid #0ea5e9; border-radius: 8px; overflow: hidden;">
     <table class="attendance-table" style="margin-top: 0;">
         <thead>
             <tr>
@@ -48,7 +58,7 @@
             {% endfor %}
             {% if not records %}
             <tr>
-                <td colspan="4" style="text-align:center; color:var(--text-muted)">
+                <td colspan="4" style="text-align:center; color:var(--text-muted); padding: 20px;">
                     এখনো কোনো attendance নেই
                 </td>
             </tr>
@@ -56,4 +66,66 @@
         </tbody>
     </table>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const ctx = document.getElementById('studentAttendanceChart').getContext('2d');
+
+    // ব্যাকএন্ড থেকে ডেটা নেওয়া হচ্ছে
+        const onTime = Number("{{ on_time }}") || 0;
+        const late = Number("{{ late }}") || 0;
+        const absent = (Number("{{ total_days }}") || 0) - (Number("{{ present_count }}") || 0);
+
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['On Time', 'Late', 'Absent'],
+            datasets: [{
+                data: [onTime, late, absent],
+                backgroundColor: [
+                    'rgba(52, 211, 153, 0.85)', // Success (Green)
+                    'rgba(251, 146, 60, 0.85)', // Warning (Orange)
+                    'rgba(248, 113, 113, 0.85)' // Danger (Red)
+                ],
+                borderColor: [
+                    '#34d399',
+                    '#fb923c',
+                    '#f87171'
+                ],
+                borderWidth: 1,
+                hoverOffset: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            cutout: '75%', // মাঝখানের ফাঁকা জায়গার পরিমাণ
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        color: '#8892a4',
+                        padding: 20,
+                        font: {
+                            family: "'Segoe UI', Arial, sans-serif",
+                            size: 13
+                        },
+                        usePointStyle: true // লেজেন্ড আইকন গোল করার জন্য
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function (context) {
+                            let label = context.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            label += context.raw + ' দিন';
+                            return label;
+                        }
+                    }
+                }
+            }
+        }
+    });
+</script>
 {% endblock %}
