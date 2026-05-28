@@ -1,8 +1,8 @@
 from database import SessionLocal, Attendance, ClassSession, get_student_by_name
 from datetime import datetime
+import pytz
 
 LATE_THRESHOLD_MINUTES = 20
-
 
 def is_duplicate(roll_number, date):
     db = SessionLocal()
@@ -68,7 +68,12 @@ def calculate_status(role, section, date, current_time_str):
 
 
 def mark_attendance(name, role, section=None, semester=None):
-    now = datetime.now()
+    # --- ম্যাজিক কোড শুরু ---
+    # বাংলাদেশের টাইমজোন সেট করা হলো
+    tz_dhaka = pytz.timezone('Asia/Dhaka')
+    now = datetime.now(tz_dhaka)
+    # --- ম্যাজিক কোড শেষ ---
+    
     date_str = now.strftime("%Y-%m-%d")
     time_str = now.strftime("%H:%M:%S")
 
@@ -86,7 +91,7 @@ def mark_attendance(name, role, section=None, semester=None):
 
     if teacher is not None:
         roll = teacher["name"]
-        # section এর ভেতরে আমরা এক্সেল থেকে designation নিয়ে সেভ করব
+        # section এর ভেতরে আমরা এক্সেল থেকে designation নিয়ে সেভ করব
         sec = str(teacher.get("designation", "Teacher")) 
         sem = ""
     else:
