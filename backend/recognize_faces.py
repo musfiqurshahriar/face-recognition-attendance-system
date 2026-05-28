@@ -10,8 +10,8 @@ TOLERANCE = 0.5
 CURRENT_SEMESTER = None
 
 # আপনার ফ্লাস্ক সার্ভারের ঠিকানা (আপাতত লোকাল, লাইভ করার পর এটি পাল্টে লাইভ লিংক দিতে হবে)
-SERVER_URL = "http://127.0.0.1:5000/api/mark-attendance"
-
+#SERVER_URL = "http://127.0.0.1:5000/api/mark-attendance" # লোকাল টেস্টিংয়ের জন্য
+SERVER_URL = "https://face-recognition-attendance-system-yuhz.onrender.com/api/mark-attendance"
 print("[INFO] Encoding লোড হচ্ছে...")
 with open(ENCODINGS_FILE, "rb") as f:
     data = pickle.load(f)

@@ -3,12 +3,26 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 from datetime import datetime
 import pandas as pd
 import os
+from dotenv import load_dotenv
+load_dotenv()
 
-DATABASE_URL = "sqlite:///../database/attendance.db"
+# --- Cloud Database Magic Setup ---
+raw_db_url = os.getenv("DATABASE_URL", "sqlite:///../database/attendance.db")
+
+if raw_db_url.startswith("postgres://"):
+    DATABASE_URL = raw_db_url.replace("postgres://", "postgresql://", 1)
+else:
+    DATABASE_URL = raw_db_url
+
 EXCEL_PATH = "../database/students.xlsx"
 TEACHERS_EXCEL_PATH = "../database/teachers.xlsx"
 
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+# SQLite-এর জন্য connect_args লাগে, কিন্তু Cloud Postgres-এর জন্য লাগে না
+if DATABASE_URL.startswith("sqlite"):
+    engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+else:
+    engine = create_engine(DATABASE_URL)
+
 SessionLocal = sessionmaker(bind=engine)
 Base = declarative_base()
 
@@ -137,7 +151,7 @@ def get_admin_from_env():
 
 def init_db():
     Base.metadata.create_all(bind=engine)
-    print("[OK] Database তৈরি হয়েছে → database/attendance.db")
+    print("[OK] Database কানেকশন সফল!")
 
 
 if __name__ == "__main__":
