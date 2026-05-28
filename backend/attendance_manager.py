@@ -75,13 +75,24 @@ def mark_attendance(name, role, section=None, semester=None):
     # Excel থেকে student info নাও
     student = get_student_by_name(name)
 
-    if student is None:
+    from database import get_teacher_by_name
+
+    student = get_student_by_name(name)
+    teacher = get_teacher_by_name(name) if student is None else None
+
+    if student is None and teacher is None:
         print(f"[WARNING] {name} — Excel এ নেই")
         return None
 
-    roll = student["roll"]
-    sec = section or student["section"]
-    sem = student.get("semester", "") or semester or ""
+    if teacher is not None:
+        roll = teacher["name"]
+        # section এর ভেতরে আমরা এক্সেল থেকে designation নিয়ে সেভ করব
+        sec = str(teacher.get("designation", "Teacher")) 
+        sem = ""
+    else:
+        roll = student["roll"]
+        sec = section or student["section"]
+        sem = student.get("semester", "") or semester or ""
 
     if is_duplicate(roll, date_str):
         return "duplicate"

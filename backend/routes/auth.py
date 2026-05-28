@@ -101,6 +101,12 @@ def login():
             user = LoginUser(student, "student")
             login_user(user)
             return redirect(url_for("student.dashboard"))
+        from database import get_teacher_by_email
+        teacher = get_teacher_by_email(email)
+        if teacher and teacher["login_password"] == password:
+            user = LoginUser(teacher, "teacher")
+            login_user(user)
+            return redirect(url_for("teacher.dashboard"))
 
         flash("Email বা Password ভুল!", "error")
 

@@ -6,6 +6,7 @@ import os
 
 DATABASE_URL = "sqlite:///../database/attendance.db"
 EXCEL_PATH = "../database/students.xlsx"
+TEACHERS_EXCEL_PATH = "../database/teachers.xlsx"
 
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(bind=engine)
@@ -46,7 +47,6 @@ def load_students_from_excel():
     df = pd.read_excel(EXCEL_PATH)
     df.columns = df.columns.str.strip().str.lower()
 
-    # session বা section যেকোনো column name support করবে
     if "session" in df.columns:
         session_col = "session"
     elif "section" in df.columns:
@@ -74,6 +74,26 @@ def load_students_from_excel():
     return students
 
 
+def load_teachers_from_excel():
+    if not os.path.exists(TEACHERS_EXCEL_PATH):
+        print(f"[ERROR] {TEACHERS_EXCEL_PATH} পাওয়া যায়নি")
+        return []
+
+    df = pd.read_excel(TEACHERS_EXCEL_PATH)
+    df.columns = df.columns.str.strip().str.lower()
+
+    teachers = []
+    for _, row in df.iterrows():
+        teachers.append({
+            "name": str(row["name"]).strip(),
+            "designation": str(row.get("designation", "")).strip(),
+            "login_email": str(row["login_email"]).strip(),
+            "login_password": str(row["login_password"]).strip(),
+            "department": str(row.get("department", "")).strip()
+        })
+    return teachers
+
+
 def get_student_by_email(email):
     students = load_students_from_excel()
     for s in students:
@@ -87,6 +107,22 @@ def get_student_by_name(name):
     for s in students:
         if s["name"].lower() == name.lower():
             return s
+    return None
+
+
+def get_teacher_by_email(email):
+    teachers = load_teachers_from_excel()
+    for t in teachers:
+        if t["login_email"].lower() == email.lower():
+            return t
+    return None
+
+
+def get_teacher_by_name(name):
+    teachers = load_teachers_from_excel()
+    for t in teachers:
+        if t["name"].lower() == name.lower():
+            return t
     return None
 
 

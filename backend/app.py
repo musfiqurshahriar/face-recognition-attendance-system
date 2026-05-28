@@ -1,6 +1,6 @@
 from flask import Flask
 from flask_login import LoginManager
-from database import init_db, get_student_by_email, get_admin_from_env
+from database import init_db, get_student_by_email, get_admin_from_env, get_teacher_by_email
 from dotenv import load_dotenv
 import os
 
@@ -52,6 +52,11 @@ def load_user(user_id):
         if student:
             return LoginUser(student, "student")
 
+    elif role == "teacher":
+        teacher = get_teacher_by_email(email)
+    if teacher:
+        return LoginUser(teacher, "teacher")
+
     return None
 
 
@@ -64,10 +69,12 @@ def skip_ngrok_warning(response):
 from routes.admin import admin_bp
 from routes.student import student_bp
 from routes.auth import auth_bp
+from routes.teacher import teacher_bp
 
 app.register_blueprint(admin_bp)
 app.register_blueprint(student_bp)
 app.register_blueprint(auth_bp)
+app.register_blueprint(teacher_bp)
 
 if __name__ == "__main__":
     init_db()

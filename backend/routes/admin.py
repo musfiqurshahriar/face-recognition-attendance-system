@@ -15,6 +15,18 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated
 
+# পদবি অনুযায়ী সাজানোর জন্য র‍্যাংকিং (ছোট সংখ্যা আগে দেখাবে)
+DESIGNATION_RANK = {
+    "Professor": 1,
+    "Associate Professor": 2,
+    "Assistant Professor": 3,
+    "Lecturer": 4
+}
+
+def get_teacher_rank(designation):
+    # যদি পদবি র‍্যাংকিং লিস্টে না থাকে, তাহলে সবার শেষে (99) দেখাবে
+    return DESIGNATION_RANK.get(designation, 99)
+
 @admin_bp.route("/dashboard")
 @login_required
 @admin_required
@@ -22,22 +34,42 @@ def dashboard():
     db = SessionLocal()
     today = __import__("datetime").date.today().strftime("%Y-%m-%d")
 
-    today_records = db.query(Attendance).filter(
+    # সব রেকর্ড আনো (পরে পাইথনে সর্ট করব)
+    all_today_records = db.query(Attendance).filter(
         Attendance.date == today
-    ).order_by(
-        Attendance.section.desc(),
-        Attendance.roll_number
     ).all()
+
+    # ছাত্র ও শিক্ষকদের আলাদা করে সাজানো
+    student_records = sorted(
+        [r for r in all_today_records if r.role == "student"],
+        key=lambda x: (x.section if x.section else "", x.roll_number if x.roll_number else "")
+    )
+    
+    teacher_records = sorted(
+        [r for r in all_today_records if r.role == "teacher"],
+        key=lambda x: get_teacher_rank(x.section) # section কলামেই আমরা designation সেভ করেছি
+    )
+    
+    # ড্যাশবোর্ডে পাঠানোর জন্য আবার একসাথে করা
+    today_records = student_records + teacher_records
 
     students_list = load_students_from_excel()
     total_students = len(students_list)
-    today_present = len([r for r in today_records if r.role == "student"])
+    today_present = len(student_records)
     today_absent = total_students - today_present
     sections = sorted(list(set([s["section"] for s in students_list if s.get("section")])))
 
-    # Absent list
-    present_rolls = [r.roll_number for r in today_records if r.role == "student"]
+    # Student Absent list
+    present_rolls = [r.roll_number for r in student_records]
     absent_students = [s for s in students_list if s.get("roll") not in present_rolls]
+    
+    # Teacher Absent list (নতুন)
+    from database import load_teachers_from_excel
+    teachers_list = load_teachers_from_excel()
+    present_teacher_names = [r.name for r in teacher_records]
+    absent_teachers = [t for t in teachers_list if t.get("name") not in present_teacher_names]
+    # শিক্ষকদের পদবি অনুযায়ী সাজানো
+    absent_teachers = sorted(absent_teachers, key=lambda x: get_teacher_rank(x.get("designation", "")))
 
     # Low attendance alert (70% এর নিচে)
     all_dates = db.query(Attendance.date).filter(
@@ -90,11 +122,13 @@ def dashboard():
         sections=sections,
         today=today,
         absent_students=absent_students,
+        absent_teachers=absent_teachers, # নতুন ভেরিয়েবল
         low_attendance=low_attendance,
         chart_labels=chart_labels,
         chart_present=chart_present,
         chart_absent=chart_absent
     )
+
 @admin_bp.route("/attendance")
 @login_required
 @admin_required
@@ -105,21 +139,34 @@ def attendance():
     section = request.args.get("section", "")
     semester = request.args.get("semester", "")
 
-    query = db.query(Attendance).filter(Attendance.role == "student")
-    if date_from:
-        query = query.filter(Attendance.date >= date_from)
-    if date_to:
-        query = query.filter(Attendance.date <= date_to)
-    if section:
-        query = query.filter(Attendance.section == section)
-    if semester:
-        query = query.filter(Attendance.semester == semester)
+    # স্টুডেন্ট কোয়েরি
+    s_query = db.query(Attendance).filter(Attendance.role == "student")
+    # টিচার কোয়েরি (নতুন)
+    t_query = db.query(Attendance).filter(Attendance.role == "teacher")
 
-    records = query.order_by(
-    Attendance.date,
-    Attendance.section.desc(),
-    Attendance.roll_number
+    if date_from:
+        s_query = s_query.filter(Attendance.date >= date_from)
+        t_query = t_query.filter(Attendance.date >= date_from)
+    if date_to:
+        s_query = s_query.filter(Attendance.date <= date_to)
+        t_query = t_query.filter(Attendance.date <= date_to)
+    if section:
+        s_query = s_query.filter(Attendance.section == section)
+    if semester:
+        s_query = s_query.filter(Attendance.semester == semester)
+
+    student_records = s_query.order_by(
+        Attendance.date,
+        Attendance.section.desc(),
+        Attendance.roll_number
     ).all()
+    
+    # টিচারদের তারিখ এবং র‍্যাংক অনুযায়ী সাজানো
+    all_teacher_records = t_query.all()
+    teacher_records = sorted(
+        all_teacher_records,
+        key=lambda x: (x.date, get_teacher_rank(x.section))
+    )
 
     students_list = load_students_from_excel()
     sections = sorted(list(set([s["section"] for s in students_list if s.get("section")])))
@@ -128,7 +175,8 @@ def attendance():
 
     db.close()
     return render_template("admin/attendance.html",
-        records=records,
+        student_records=student_records,
+        teacher_records=teacher_records, # নতুন
         sections=sections,
         semesters=semesters,
         date_from=date_from,
@@ -210,82 +258,126 @@ def export_excel():
     semester = request.args.get("semester", "")
     date_from = request.args.get("date_from", "")
     date_to = request.args.get("date_to", "")
-
-    s_query = db.query(Attendance).filter(Attendance.role == "student")
-    t_query = db.query(Attendance).filter(Attendance.role == "teacher")
-
-    if section:
-        s_query = s_query.filter(Attendance.section == section)
-    if semester:
-        s_query = s_query.filter(Attendance.semester == semester)
-        t_query = t_query.filter(Attendance.semester == semester)
-    if date_from:
-        s_query = s_query.filter(Attendance.date >= date_from)
-        t_query = t_query.filter(Attendance.date >= date_from)
-    if date_to:
-        s_query = s_query.filter(Attendance.date <= date_to)
-        t_query = t_query.filter(Attendance.date <= date_to)
-
-    s_records = s_query.order_by(
-        Attendance.date,
-        Attendance.section.desc(),
-        Attendance.roll_number
-    ).all()
-    t_records = t_query.order_by(Attendance.name, Attendance.date).all()
-    db.close()
+    # নতুন প্যারামিটার: কোনটি ডাউনলোড করবে
+    export_type = request.args.get("type", "student") 
 
     output = io.BytesIO()
+    
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
-
         wb = writer.book
-        ws = wb.create_sheet("Students")
+        
+        # যদি স্টুডেন্ট ডাউনলোড করতে চায়
+        if export_type == "student" or export_type == "all":
+            s_query = db.query(Attendance).filter(Attendance.role == "student")
+            if section:
+                s_query = s_query.filter(Attendance.section == section)
+            if semester:
+                s_query = s_query.filter(Attendance.semester == semester)
+            if date_from:
+                s_query = s_query.filter(Attendance.date >= date_from)
+            if date_to:
+                s_query = s_query.filter(Attendance.date <= date_to)
 
-        headers = ["Date", "Roll", "Name", "Session", "Time", "Status", "Semester"]
-        ws.append(headers)
+            s_records = s_query.order_by(
+                Attendance.date,
+                Attendance.section.desc(),
+                Attendance.roll_number
+            ).all()
+            
+            ws = wb.create_sheet("Students")
+            headers = ["Date", "Roll", "Name", "Session", "Time", "Status", "Semester"]
+            ws.append(headers)
 
-        header_fill = PatternFill(start_color="2C3E50", end_color="2C3E50", fill_type="solid")
-        header_font = Font(color="FFFFFF", bold=True)
-        for col in range(1, len(headers) + 1):
-            cell = ws.cell(row=1, column=col)
-            cell.fill = header_fill
-            cell.font = header_font
+            header_fill = PatternFill(start_color="2C3E50", end_color="2C3E50", fill_type="solid")
+            header_font = Font(color="FFFFFF", bold=True)
+            for col in range(1, len(headers) + 1):
+                cell = ws.cell(row=1, column=col)
+                cell.fill = header_fill
+                cell.font = header_font
 
-        current_date = None
-        row_num = 2
+            current_date = None
+            row_num = 2
 
-        for r in s_records:
-            if r.date != current_date:
-                current_date = r.date
-                date_cell = ws.cell(row=row_num, column=1, value=r.date)
-                date_cell.font = Font(bold=True, size=12, color="000000")
-                date_cell.fill = PatternFill(start_color="E8E4FF", end_color="E8E4FF", fill_type="solid")
-                ws.row_dimensions[row_num].height = 20
+            for r in s_records:
+                if r.date != current_date:
+                    current_date = r.date
+                    date_cell = ws.cell(row=row_num, column=1, value=r.date)
+                    date_cell.font = Font(bold=True, size=12, color="000000")
+                    date_cell.fill = PatternFill(start_color="E8E4FF", end_color="E8E4FF", fill_type="solid")
+                    ws.row_dimensions[row_num].height = 20
+                    row_num += 1
+
+                ws.cell(row=row_num, column=1, value="")
+                ws.cell(row=row_num, column=2, value=r.roll_number)
+                ws.cell(row=row_num, column=3, value=r.name)
+                ws.cell(row=row_num, column=4, value=r.section)
+                ws.cell(row=row_num, column=5, value=r.time)
+                ws.cell(row=row_num, column=6, value=r.status)
+                ws.cell(row=row_num, column=7, value=r.semester)
                 row_num += 1
 
-            ws.cell(row=row_num, column=1, value="")
-            ws.cell(row=row_num, column=2, value=r.roll_number)
-            ws.cell(row=row_num, column=3, value=r.name)
-            ws.cell(row=row_num, column=4, value=r.section)
-            ws.cell(row=row_num, column=5, value=r.time)
-            ws.cell(row=row_num, column=6, value=r.status)
-            ws.cell(row=row_num, column=7, value=r.semester)
-            row_num += 1
+            for col in range(1, len(headers) + 1):
+                ws.column_dimensions[get_column_letter(col)].width = 18
 
-        for col in range(1, len(headers) + 1):
-            ws.column_dimensions[get_column_letter(col)].width = 18
+        # যদি টিচার ডাউনলোড করতে চায়
+        if export_type == "teacher" or export_type == "all":
+            t_query = db.query(Attendance).filter(Attendance.role == "teacher")
+            if date_from:
+                t_query = t_query.filter(Attendance.date >= date_from)
+            if date_to:
+                t_query = t_query.filter(Attendance.date <= date_to)
+                
+            all_t_records = t_query.all()
+            t_records = sorted(
+                all_t_records,
+                key=lambda x: (x.date, get_teacher_rank(x.section))
+            )
+            
+            t_ws = wb.create_sheet("Teachers")
+            t_headers = ["Date", "Name", "Designation", "Time", "Status"]
+            t_ws.append(t_headers)
 
-        t_data = [{
-            "Name": r.name,
-            "Date": r.date,
-            "Time": r.time,
-            "Status": r.status
-        } for r in t_records]
-        pd.DataFrame(t_data).to_excel(writer, sheet_name="Teachers", index=False)
+            header_fill = PatternFill(start_color="2C3E50", end_color="2C3E50", fill_type="solid")
+            header_font = Font(color="FFFFFF", bold=True)
+            for col in range(1, len(t_headers) + 1):
+                cell = t_ws.cell(row=1, column=col)
+                cell.fill = header_fill
+                cell.font = header_font
 
+            current_date_t = None
+            row_num_t = 2
+
+            for r in t_records:
+                if r.date != current_date_t:
+                    current_date_t = r.date
+                    date_cell = t_ws.cell(row=row_num_t, column=1, value=r.date)
+                    date_cell.font = Font(bold=True, size=12, color="000000")
+                    date_cell.fill = PatternFill(start_color="E8E4FF", end_color="E8E4FF", fill_type="solid")
+                    t_ws.row_dimensions[row_num_t].height = 20
+                    row_num_t += 1
+
+                t_ws.cell(row=row_num_t, column=1, value="")
+                t_ws.cell(row=row_num_t, column=2, value=r.name)
+                t_ws.cell(row=row_num_t, column=3, value=r.section)
+                t_ws.cell(row=row_num_t, column=4, value=r.time)
+                t_ws.cell(row=row_num_t, column=5, value=r.status)
+                row_num_t += 1
+
+            for col in range(1, len(t_headers) + 1):
+                t_ws.column_dimensions[get_column_letter(col)].width = 20
+                
+        # Default sheet রিমুভ করা
+        if "Sheet" in wb.sheetnames:
+            wb.remove(wb["Sheet"])
+
+    db.close()
     output.seek(0)
+    
+    filename = f"{export_type}_attendance.xlsx" if export_type != "all" else "full_attendance_report.xlsx"
+    
     return send_file(
         output,
-        download_name="attendance_report.xlsx",
+        download_name=filename,
         as_attachment=True,
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
@@ -460,3 +552,82 @@ def export_percentage():
         as_attachment=True,
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
+
+
+@admin_bp.route("/manual-attendance", methods=["POST"])
+@login_required
+@admin_required
+def manual_attendance():
+    db = SessionLocal()
+    date_str = request.form.get("date")
+    role = request.form.get("role")
+    identifier = request.form.get("identifier") # স্টুডেন্টের জন্য Roll, শিক্ষকের জন্য Name
+    status = request.form.get("status")
+
+    from datetime import datetime
+    time_str = datetime.now().strftime("%H:%M:%S")
+
+    name = ""
+    section = ""
+    semester = ""
+    roll = ""
+
+    if role == "student":
+        # স্টুডেন্টদের এক্সেল থেকে ডাটা নাও
+        all_students = load_students_from_excel()
+        student = next((s for s in all_students if str(s.get("roll")) == str(identifier)), None)
+        
+        if not student:
+            flash("এই রোল নাম্বারের কোনো স্টুডেন্ট পাওয়া যায়নি!", "error")
+            return redirect(url_for("admin.dashboard"))
+            
+        name = student["name"]
+        roll = student["roll"]
+        section = student.get("section", "")
+        semester = student.get("semester", "")
+    else:
+        # শিক্ষকদের এক্সেল থেকে ডাটা নাও
+        from database import load_teachers_from_excel
+        all_teachers = load_teachers_from_excel()
+        teacher = next((t for t in all_teachers if t.get("name", "").lower() == identifier.lower()), None)
+        
+        if not teacher:
+            flash("এই নামের কোনো শিক্ষক পাওয়া যায়নি! (নামের বানান এক্সেলের মতো হতে হবে)", "error")
+            return redirect(url_for("admin.dashboard"))
+            
+        name = teacher["name"]
+        roll = name
+        section = teacher.get("designation", "")
+        semester = ""
+
+    # চেক করো আজকে তার অ্যাটেনডেন্স আগে থেকেই আছে কিনা
+    existing = db.query(Attendance).filter(
+        Attendance.date == date_str,
+        Attendance.roll_number == roll,
+        Attendance.role == role
+    ).first()
+
+    if existing:
+        # যদি থাকে, তাহলে শুধু স্ট্যাটাস আপডেট করো (যেমন Absent থেকে Present)
+        existing.status = status
+        existing.time = time_str
+        flash(f"{name} এর Attendance আপডেট করা হয়েছে!", "success")
+    else:
+        # যদি না থাকে, নতুন রেকর্ড তৈরি করো
+        new_record = Attendance(
+            user_id=roll,
+            name=name,
+            role=role,
+            roll_number=roll,
+            section=section,
+            date=date_str,
+            time=time_str,
+            status=status,
+            semester=semester
+        )
+        db.add(new_record)
+        flash(f"{name} এর ম্যানুয়াল Attendance সফলভাবে যোগ হয়েছে!", "success")
+
+    db.commit()
+    db.close()
+    return redirect(url_for("admin.dashboard"))
