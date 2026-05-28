@@ -2,12 +2,15 @@ import face_recognition
 import cv2
 import pickle
 import numpy as np
-from attendance_manager import mark_attendance
+import requests
 from datetime import datetime
 
 ENCODINGS_FILE = "../models/encodings.pkl"
 TOLERANCE = 0.5
 CURRENT_SEMESTER = None
+
+# আপনার ফ্লাস্ক সার্ভারের ঠিকানা (আপাতত লোকাল, লাইভ করার পর এটি পাল্টে লাইভ লিংক দিতে হবে)
+SERVER_URL = "http://127.0.0.1:5000/api/mark-attendance"
 
 print("[INFO] Encoding লোড হচ্ছে...")
 with open(ENCODINGS_FILE, "rb") as f:
@@ -57,21 +60,39 @@ while True:
                 name = known_names[best_match_index]
                 role = known_roles[best_match_index]
 
-        # Attendance নাও
+        # Attendance নাও - API এর মাধ্যমে
         status = "Already Marked" if name in already_marked else ""
 
         if name != "Unknown" and name not in already_marked:
-            result = mark_attendance(
-                name=name,
-                role=role.rstrip("s"),
-                semester=None
-            )
-            if result == "duplicate":
-                status = "Already Marked"
-                already_marked.add(name)
-            elif result:
-                status = result
-                already_marked.add(name)
+            # সার্ভারে পাঠানোর জন্য ডেটা রেডি করা
+            payload = {
+                "name": name,
+                "role": role.rstrip("s"),
+                "semester": CURRENT_SEMESTER
+            }
+            
+            try:
+                # সার্ভারে রিকোয়েস্ট পাঠানো
+                response = requests.post(SERVER_URL, json=payload, timeout=5)
+                
+                if response.status_code == 200:
+                    result_data = response.json()
+                    db_status = result_data.get("status")
+                    
+                    if db_status == "duplicate":
+                        status = "Already Marked"
+                        already_marked.add(name)
+                    elif db_status == "success":
+                        status = result_data.get("status_message", "Present")
+                        already_marked.add(name)
+                    else:
+                        status = "Failed"
+                else:
+                    status = "Server Error"
+                    
+            except requests.exceptions.RequestException as e:
+                status = "Offline"
+                # print(f"[ERROR] সার্ভারে কানেক্ট করা যাচ্ছে না: {e}")
 
         # Terminal এ একবারই print করো
         if name not in already_printed and name != "Unknown":
