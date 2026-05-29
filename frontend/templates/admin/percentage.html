@@ -5,22 +5,28 @@
 <div class="notification-box" style="margin-bottom: 24px;">
     <div>
         <h3>📊 Filter Percentage</h3>
-        <p>Session বা Semester অনুযায়ী স্টুডেন্টদের উপস্থিতির হার দেখুন</p>
+        <p>Session বা Semester অনুযায়ী স্টুডেন্টদের উপস্থিতির হার দেখুন</p>
     </div>
     <form method="GET" class="filter-form" style="margin-bottom: 0;">
-        <select name="section">
-            <option value="">All Session</option>
+        <select name="section"
+            style="background-color: #1a1e29; color: #ffffff; border: 1px solid #2d3748; border-radius: 8px; padding: 10px 12px; width: 100%; -webkit-appearance: none; appearance: none;">
+            <option value="" style="color: #ffffff; background-color: #1a1e29;">All Session</option>
             {% for s in sections %}
-            <option value="{{ s }}" {% if s==selected_section %}selected{% endif %}>{{ s }}</option>
+            <option value="{{ s }}" {% if s==selected_section %}selected{% endif %}
+                style="color: #ffffff; background-color: #1a1e29;">{{ s }}</option>
             {% endfor %}
         </select>
-        <select name="semester">
-            <option value="">All Semester</option>
+
+        <select name="semester"
+            style="background-color: #1a1e29; color: #ffffff; border: 1px solid #2d3748; border-radius: 8px; padding: 10px 12px; width: 100%; -webkit-appearance: none; appearance: none;">
+            <option value="" style="color: #ffffff; background-color: #1a1e29;">All Semester</option>
             {% for s in semesters %}
-            <option value="{{ s }}" {% if s==selected_semester %}selected{% endif %}>{{ s }}</option>
+            <option value="{{ s }}" {% if s==selected_semester %}selected{% endif %}
+                style="color: #ffffff; background-color: #1a1e29;">{{ s }}</option>
             {% endfor %}
         </select>
-        <button type="submit" class="btn-primary" style="padding: 8px 24px;">Filter</button>
+
+        <button type="submit" class="btn-primary" style="padding: 10px 24px;">Filter</button>
     </form>
 </div>
 
@@ -31,43 +37,43 @@
 
 <h3>শিক্ষার্থী উপস্থিতির হার (Student Attendance Percentage)</h3>
 <div class="table-wrap">
-<div style="border-left: 4px solid #10b981; border-radius: 8px; overflow: hidden;">
-    <table class="attendance-table" style="margin-top: 0;">
-        <thead>
-            
-            <tr>
-                <th>Roll</th>
-                <th>নাম</th>
-                <th>Session</th>
-                <th>উপস্থিত</th>
-                <th>মোট ক্লাস</th>
-                <th>Percentage</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for r in result %}
-            <tr>
-                <td>{{ r.roll }}</td>
-                <td>{{ r.name }}</td>
-                <td>{{ r.section }}</td>
-                <td>{{ r.present }}</td>
-                <td>{{ r.total }}</td>
-                <td>
-                    {% if r.percentage < 70 %} <span class="badge badge-late">{{ r.percentage }}%</span>
-                        {% else %}
-                        <span class="badge badge-on-time">{{ r.percentage }}%</span>
-                        {% endif %}
-                </td>
-            </tr>
-            {% endfor %}
-            {% if not result %}
-            <tr>
-                <td colspan="6" style="text-align:center;color:var(--text-muted)">
-                    কোনো স্টুডেন্ট পাওয়া যায়নি
-                </td>
-            </tr>
-            {% endif %}
-        </tbody>
-    </table>
-</div>
-{% endblock %}
+    <div style="border-left: 4px solid #10b981; border-radius: 8px; overflow: hidden;">
+        <table class="attendance-table" style="margin-top: 0;">
+            <thead>
+                <tr>
+                    <th>Roll</th>
+                    <th>নাম</th>
+                    <th>Session</th>
+                    <th>উপস্থিত</th>
+                    <th>মোট ক্লাস</th>
+                    <th>Percentage</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in result %}
+                <tr>
+                    <td>{{ r.roll }}</td>
+                    <td>{{ r.name }}</td>
+                    <td>{{ r.section }}</td>
+                    <td>{{ r.present }}</td>
+                    <td>{{ r.total }}</td>
+                    <td>
+                        {% if r.percentage < 70 %} <span class="badge badge-late">{{ r.percentage }}%</span>
+                            {% else %}
+                            <span class="badge badge-on-time">{{ r.percentage }}%</span>
+                            {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+
+                {% if not result %}
+                <tr>
+                    <td colspan="6" style="text-align:center;color:var(--text-muted)">
+                        কোনো স্টুডেন্ট পাওয়া যায়নি
+                    </td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div> {% endblock %}
