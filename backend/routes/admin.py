@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request, send_file, redirect, url_for, flash
 from flask_login import login_required, current_user
 from database import SessionLocal, Attendance, load_students_from_excel, get_admin_from_env
+from sqlalchemy import func  # অপ্টিমাইজেশনের জন্য func ইমপোর্ট করা হলো
 import pandas as pd
 import io
 import os
@@ -24,7 +25,6 @@ DESIGNATION_RANK = {
 }
 
 def get_teacher_rank(designation):
-    # যদি পদবি র‍্যাংকিং লিস্টে না থাকে, তাহলে সবার শেষে (99) দেখাবে
     return DESIGNATION_RANK.get(designation, 99)
 
 @admin_bp.route("/dashboard")
@@ -34,7 +34,7 @@ def dashboard():
     db = SessionLocal()
     today = __import__("datetime").date.today().strftime("%Y-%m-%d")
 
-    # সব রেকর্ড আনো (পরে পাইথনে সর্ট করব)
+    # সব রেকর্ড আনো
     all_today_records = db.query(Attendance).filter(
         Attendance.date == today
     ).all()
@@ -48,7 +48,6 @@ def dashboard():
             first_year = 0
         return (-first_year, r.roll_number if r.roll_number else "")
 
-    # ছাত্র ও শিক্ষকদের আলাদা করে সাজানো
     student_records = sorted(
         [r for r in all_today_records if r.role == "student"],
         key=student_obj_sort_key
@@ -56,10 +55,9 @@ def dashboard():
     
     teacher_records = sorted(
         [r for r in all_today_records if r.role == "teacher"],
-        key=lambda x: get_teacher_rank(x.section) # section কলামেই আমরা designation সেভ করেছি
+        key=lambda x: get_teacher_rank(x.section)
     )
     
-    # ড্যাশবোর্ডে পাঠানোর জন্য আবার একসাথে করা
     today_records = student_records + teacher_records
 
     students_list = load_students_from_excel()
@@ -86,26 +84,32 @@ def dashboard():
     teachers_list = load_teachers_from_excel()
     present_teacher_names = [r.name for r in teacher_records]
     absent_teachers = [t for t in teachers_list if t.get("name") not in present_teacher_names]
-    # শিক্ষকদের পদবি অনুযায়ী সাজানো
     absent_teachers = sorted(absent_teachers, key=lambda x: get_teacher_rank(x.get("designation", "")))
 
-    # Low attendance alert (70% এর নিচে)
-    all_dates = db.query(Attendance.date).filter(
-        Attendance.role == "student"
-    ).distinct().all()
+    # =========================================================================
+    # OPTIMIZATION 1: Low attendance alert এক কোয়েরিতে আনা (Group By)
+    # =========================================================================
+    all_dates = db.query(Attendance.date).filter(Attendance.role == "student").distinct().all()
     total_days = len(all_dates)
 
     low_attendance = []
     if total_days > 0:
+        # লুপের বাইরে একবারে সব স্টুডেন্টের উপস্থিতির সংখ্যা গুনে আনা হলো
+        attendance_results = db.query(Attendance.roll_number, func.count(Attendance.id))\
+            .filter(Attendance.role == "student")\
+            .group_by(Attendance.roll_number).all()
+        
+        # দ্রুত খোঁজার জন্য ডিকশনারিতে রূপান্তর {'roll': count}
+        attendance_counts = {row[0]: row[1] for row in attendance_results}
+
         for student in students_list:
-            present_count = db.query(Attendance).filter(
-                Attendance.role == "student",
-                Attendance.roll_number == student.get("roll")
-            ).count()
+            student_roll = student.get("roll")
+            present_count = attendance_counts.get(student_roll, 0)
+            
             percentage = round((present_count / total_days * 100), 1)
             if percentage < 70:
                 low_attendance.append({
-                    "roll": student.get("roll"),
+                    "roll": student_roll,
                     "name": student.get("name"),
                     "section": student.get("section"),
                     "percentage": percentage,
@@ -113,20 +117,31 @@ def dashboard():
                     "total": total_days
                 })
 
-    # Chart data — শেষ ৭ দিনের attendance trend
+    # =========================================================================
+    # OPTIMIZATION 2: চার্টের শেষ ৭ দিনের ডেটা এক কোয়েরিতে আনা
+    # =========================================================================
     from datetime import datetime, timedelta
     chart_labels = []
     chart_present = []
     chart_absent = []
 
+    # শেষ ৭ দিনের শুরুর তারিখ বের করা
+    start_date = (datetime.today() - timedelta(days=6)).strftime("%Y-%m-%d")
+    
+    # লুপ ছাড়া একবারে ৭ দিনের ডেটা গ্রুপ বাই করে আনা হলো
+    chart_results = db.query(Attendance.date, func.count(Attendance.roll_number.distinct()))\
+        .filter(Attendance.date >= start_date, Attendance.role == "student")\
+        .group_by(Attendance.date).all()
+        
+    chart_counts = {row[0]: row[1] for row in chart_results}
+
     for i in range(6, -1, -1):
         day = (datetime.today() - timedelta(days=i)).strftime("%Y-%m-%d")
         day_label = (datetime.today() - timedelta(days=i)).strftime("%d %b")
-        present = db.query(Attendance).filter(
-            Attendance.date == day,
-            Attendance.role == "student"
-        ).distinct(Attendance.roll_number).count()
+        
+        present = chart_counts.get(day, 0)
         absent = total_students - present
+        
         chart_labels.append(day_label)
         chart_present.append(present)
         chart_absent.append(absent)
@@ -157,9 +172,7 @@ def attendance():
     section = request.args.get("section", "")
     semester = request.args.get("semester", "")
 
-    # স্টুডেন্ট কোয়েরি
     s_query = db.query(Attendance).filter(Attendance.role == "student")
-    # টিচার কোয়েরি
     t_query = db.query(Attendance).filter(Attendance.role == "teacher")
 
     if date_from:
@@ -179,7 +192,6 @@ def attendance():
         Attendance.roll_number
     ).all()
     
-    # টিচারদের তারিখ এবং র‍্যাংক অনুযায়ী সাজানো
     all_teacher_records = t_query.all()
     teacher_records = sorted(
         all_teacher_records,
@@ -268,7 +280,7 @@ def percentage():
 @login_required
 @admin_required
 def export_excel():
-    from openpyxl.styles import PatternFill, Font, Alignment
+    from openpyxl.styles import PatternFill, Font
     from openpyxl.utils import get_column_letter
 
     db = SessionLocal()
@@ -283,7 +295,6 @@ def export_excel():
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
         wb = writer.book
         
-        # যদি স্টুডেন্ট ডাউনলোড করতে চায়
         if export_type == "student" or export_type == "all":
             s_query = db.query(Attendance).filter(Attendance.role == "student")
             if section:
@@ -336,7 +347,6 @@ def export_excel():
             for col in range(1, len(headers) + 1):
                 ws.column_dimensions[get_column_letter(col)].width = 18
 
-        # যদি টিচার ডাউনলোড করতে চায়
         if export_type == "teacher" or export_type == "all":
             t_query = db.query(Attendance).filter(Attendance.role == "teacher")
             if date_from:
@@ -458,7 +468,6 @@ def change_password():
             flash("Password কমপক্ষে ৬ অক্ষরের হতে হবে!", "error")
             return redirect(url_for("admin.change_password"))
 
-        # .env ফাইল আপডেট করো
         env_path = os.path.normpath(os.path.join(
             os.path.dirname(os.path.abspath(__file__)),
             "..", ".env"
@@ -474,7 +483,6 @@ def change_password():
                 else:
                     f.write(line)
 
-        # dotenv reload
         from dotenv import load_dotenv
         load_dotenv(env_path, override=True)
 
@@ -550,7 +558,6 @@ def export_percentage():
             ]
             ws.append(row)
 
-            # ৭০% এর নিচে হলে লাল রং
             if percentage < 70:
                 for col in range(1, len(headers) + 1):
                     ws.cell(row=ws.max_row, column=col).fill = PatternFill(
@@ -622,7 +629,7 @@ def manual_attendance():
     if existing:
         existing.status = status
         existing.time = time_str
-        flash(f"{name} এর Attendance আপডেট করা হয়েছে!", "success")
+        flash(f"{name} এর Attendance Attendance আপডেট করা হয়েছে!", "success")
     else:
         new_record = Attendance(
             user_id=roll,
