@@ -5,13 +5,12 @@ import pandas as pd
 import os
 from dotenv import load_dotenv, find_dotenv
 
-# এটি প্রজেক্টের যেকোনো জায়গা থেকে .env ফাইল ঠিকই খুঁজে নেবে
+# এটি প্রজেক্টের যেকোনো জায়গা থেকে .env ফাইল ঠিকই খুঁজে নেবে
 load_dotenv(find_dotenv())
 
 # --- Cloud Database Magic Setup ---
 raw_db_url = os.getenv("DATABASE_URL", "sqlite:///../database/attendance.db")
 
-# ডাটাবেজ ঠিকমতো কানেক্ট হচ্ছে কি না, তা টার্মিনালে দেখার জন্য একটি ট্র্যাকার:
 print(f"[DEBUG] Connected DB: {raw_db_url[:13]}...")
 
 if raw_db_url.startswith("postgres://"):
@@ -19,12 +18,9 @@ if raw_db_url.startswith("postgres://"):
 else:
     DATABASE_URL = raw_db_url
     
-# ... (ফাইলের বাকি কোড যেমন আছে তেমনই থাকবে)
-
 EXCEL_PATH = "../database/students.xlsx"
 TEACHERS_EXCEL_PATH = "../database/teachers.xlsx"
 
-# SQLite-এর জন্য connect_args লাগে, কিন্তু Cloud Postgres-এর জন্য লাগে না
 if DATABASE_URL.startswith("sqlite"):
     engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 else:
@@ -32,6 +28,15 @@ else:
 
 SessionLocal = sessionmaker(bind=engine)
 Base = declarative_base()
+
+# ==========================================
+# Caching Variables
+# ==========================================
+_STUDENT_CACHE = None
+_STUDENT_CACHE_TIME = 0
+
+_TEACHER_CACHE = None
+_TEACHER_CACHE_TIME = 0
 
 
 class Attendance(Base):
@@ -61,10 +66,20 @@ class ClassSession(Base):
 
 
 def load_students_from_excel():
+    global _STUDENT_CACHE, _STUDENT_CACHE_TIME
+
     if not os.path.exists(EXCEL_PATH):
         print(f"[ERROR] {EXCEL_PATH} পাওয়া যায়নি")
         return []
 
+    # ফাইলের লাস্ট মডিফাই হওয়ার সময় বের করা
+    current_mtime = os.path.getmtime(EXCEL_PATH)
+
+    # যদি ক্যাশ থাকে এবং ফাইল পরিবর্তন না হয়ে থাকে, তবে সরাসরি ক্যাশ থেকে রিটার্ন করো (No Pandas needed!)
+    if _STUDENT_CACHE is not None and current_mtime == _STUDENT_CACHE_TIME:
+        return _STUDENT_CACHE
+
+    # যদি ক্যাশ না থাকে বা নতুন ফাইল আপলোড হয়, কেবল তখনই রিড করো
     df = pd.read_excel(EXCEL_PATH)
     df.columns = df.columns.str.strip().str.lower()
 
@@ -92,13 +107,24 @@ def load_students_from_excel():
             "guardian_email": guardian,
             "semester": str(row["semester"]).strip()
         })
+    
+    # মেমরিতে ডেটা এবং সময় সেভ করে রাখা
+    _STUDENT_CACHE = students
+    _STUDENT_CACHE_TIME = current_mtime
     return students
 
 
 def load_teachers_from_excel():
+    global _TEACHER_CACHE, _TEACHER_CACHE_TIME
+
     if not os.path.exists(TEACHERS_EXCEL_PATH):
         print(f"[ERROR] {TEACHERS_EXCEL_PATH} পাওয়া যায়নি")
         return []
+
+    current_mtime = os.path.getmtime(TEACHERS_EXCEL_PATH)
+
+    if _TEACHER_CACHE is not None and current_mtime == _TEACHER_CACHE_TIME:
+        return _TEACHER_CACHE
 
     df = pd.read_excel(TEACHERS_EXCEL_PATH)
     df.columns = df.columns.str.strip().str.lower()
@@ -112,6 +138,9 @@ def load_teachers_from_excel():
             "login_password": str(row["login_password"]).strip(),
             "department": str(row.get("department", "")).strip()
         })
+        
+    _TEACHER_CACHE = teachers
+    _TEACHER_CACHE_TIME = current_mtime
     return teachers
 
 
