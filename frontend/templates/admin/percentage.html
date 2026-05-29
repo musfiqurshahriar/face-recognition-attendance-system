@@ -9,13 +9,13 @@
     </div>
     <form method="GET" class="filter-form" style="margin-bottom: 0;">
         <select name="section">
-            <option value="">সব Session</option>
+            <option value="">All Session</option>
             {% for s in sections %}
             <option value="{{ s }}" {% if s==selected_section %}selected{% endif %}>{{ s }}</option>
             {% endfor %}
         </select>
         <select name="semester">
-            <option value="">সব Semester</option>
+            <option value="">All Semester</option>
             {% for s in semesters %}
             <option value="{{ s }}" {% if s==selected_semester %}selected{% endif %}>{{ s }}</option>
             {% endfor %}
@@ -31,8 +31,10 @@
 
 <h3>শিক্ষার্থী উপস্থিতির হার (Student Attendance Percentage)</h3>
 <div class="table-wrap">
-    <table class="attendance-table">
+<div style="border-left: 4px solid #10b981; border-radius: 8px; overflow: hidden;">
+    <table class="attendance-table" style="margin-top: 0;">
         <thead>
+            
             <tr>
                 <th>Roll</th>
                 <th>নাম</th>

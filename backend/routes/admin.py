@@ -15,7 +15,7 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated
 
-# পদবি অনুযায়ী সাজানোর জন্য র‍্যাংকিং (ছোট সংখ্যা আগে দেখাবে)
+# পদবি অনুযায়ী সাজানোর জন্য র‍্যাংকিং (ছোট সংখ্যা আগে দেখাবে)
 DESIGNATION_RANK = {
     "Professor": 1,
     "Associate Professor": 2,
@@ -39,10 +39,19 @@ def dashboard():
         Attendance.date == today
     ).all()
 
+    # স্টুডেন্টদের সেশন (বড় থেকে ছোট) এবং রোল (ছোট থেকে বড়) অনুযায়ী সাজানোর লজিক
+    def student_obj_sort_key(r):
+        sec = r.section if r.section else "0-0"
+        try: 
+            first_year = int(sec.split("-")[0])
+        except: 
+            first_year = 0
+        return (-first_year, r.roll_number if r.roll_number else "")
+
     # ছাত্র ও শিক্ষকদের আলাদা করে সাজানো
     student_records = sorted(
         [r for r in all_today_records if r.role == "student"],
-        key=lambda x: (x.section if x.section else "", x.roll_number if x.roll_number else "")
+        key=student_obj_sort_key
     )
     
     teacher_records = sorted(
@@ -59,16 +68,25 @@ def dashboard():
     today_absent = total_students - today_present
     sections = sorted(list(set([s["section"] for s in students_list if s.get("section")])))
 
-    # Student Absent list
+    # স্টুডেন্টদের Absent list-ও সেশন এবং রোল অনুযায়ী সাজানো
+    def student_dict_sort_key(s):
+        sec = s.get("section", "0-0")
+        try: 
+            first_year = int(sec.split("-")[0])
+        except: 
+            first_year = 0
+        return (-first_year, s.get("roll", ""))
+
     present_rolls = [r.roll_number for r in student_records]
     absent_students = [s for s in students_list if s.get("roll") not in present_rolls]
+    absent_students = sorted(absent_students, key=student_dict_sort_key)
     
-    # Teacher Absent list (নতুন)
+    # Teacher Absent list
     from database import load_teachers_from_excel
     teachers_list = load_teachers_from_excel()
     present_teacher_names = [r.name for r in teacher_records]
     absent_teachers = [t for t in teachers_list if t.get("name") not in present_teacher_names]
-    # শিক্ষকদের পদবি অনুযায়ী সাজানো
+    # শিক্ষকদের পদবি অনুযায়ী সাজানো
     absent_teachers = sorted(absent_teachers, key=lambda x: get_teacher_rank(x.get("designation", "")))
 
     # Low attendance alert (70% এর নিচে)
@@ -122,7 +140,7 @@ def dashboard():
         sections=sections,
         today=today,
         absent_students=absent_students,
-        absent_teachers=absent_teachers, # নতুন ভেরিয়েবল
+        absent_teachers=absent_teachers, 
         low_attendance=low_attendance,
         chart_labels=chart_labels,
         chart_present=chart_present,
@@ -139,9 +157,9 @@ def attendance():
     section = request.args.get("section", "")
     semester = request.args.get("semester", "")
 
-    # স্টুডেন্ট কোয়েরি
+    # স্টুডেন্ট কোয়েরি
     s_query = db.query(Attendance).filter(Attendance.role == "student")
-    # টিচার কোয়েরি (নতুন)
+    # টিচার কোয়েরি
     t_query = db.query(Attendance).filter(Attendance.role == "teacher")
 
     if date_from:
@@ -161,7 +179,7 @@ def attendance():
         Attendance.roll_number
     ).all()
     
-    # টিচারদের তারিখ এবং র‍্যাংক অনুযায়ী সাজানো
+    # টিচারদের তারিখ এবং র‍্যাংক অনুযায়ী সাজানো
     all_teacher_records = t_query.all()
     teacher_records = sorted(
         all_teacher_records,
@@ -176,7 +194,7 @@ def attendance():
     db.close()
     return render_template("admin/attendance.html",
         student_records=student_records,
-        teacher_records=teacher_records, # নতুন
+        teacher_records=teacher_records, 
         sections=sections,
         semesters=semesters,
         date_from=date_from,
@@ -258,7 +276,6 @@ def export_excel():
     semester = request.args.get("semester", "")
     date_from = request.args.get("date_from", "")
     date_to = request.args.get("date_to", "")
-    # নতুন প্যারামিটার: কোনটি ডাউনলোড করবে
     export_type = request.args.get("type", "student") 
 
     output = io.BytesIO()
@@ -266,7 +283,7 @@ def export_excel():
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
         wb = writer.book
         
-        # যদি স্টুডেন্ট ডাউনলোড করতে চায়
+        # যদি স্টুডেন্ট ডাউনলোড করতে চায়
         if export_type == "student" or export_type == "all":
             s_query = db.query(Attendance).filter(Attendance.role == "student")
             if section:
@@ -319,7 +336,7 @@ def export_excel():
             for col in range(1, len(headers) + 1):
                 ws.column_dimensions[get_column_letter(col)].width = 18
 
-        # যদি টিচার ডাউনলোড করতে চায়
+        # যদি টিচার ডাউনলোড করতে চায়
         if export_type == "teacher" or export_type == "all":
             t_query = db.query(Attendance).filter(Attendance.role == "teacher")
             if date_from:
@@ -366,7 +383,6 @@ def export_excel():
             for col in range(1, len(t_headers) + 1):
                 t_ws.column_dimensions[get_column_letter(col)].width = 20
                 
-        # Default sheet রিমুভ করা
         if "Sheet" in wb.sheetnames:
             wb.remove(wb["Sheet"])
 
@@ -553,7 +569,6 @@ def export_percentage():
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
-
 @admin_bp.route("/manual-attendance", methods=["POST"])
 @login_required
 @admin_required
@@ -561,7 +576,7 @@ def manual_attendance():
     db = SessionLocal()
     date_str = request.form.get("date")
     role = request.form.get("role")
-    identifier = request.form.get("identifier") # স্টুডেন্টের জন্য Roll, শিক্ষকের জন্য Name
+    identifier = request.form.get("identifier") 
     status = request.form.get("status")
 
     from datetime import datetime
@@ -573,12 +588,11 @@ def manual_attendance():
     roll = ""
 
     if role == "student":
-        # স্টুডেন্টদের এক্সেল থেকে ডাটা নাও
         all_students = load_students_from_excel()
         student = next((s for s in all_students if str(s.get("roll")) == str(identifier)), None)
         
         if not student:
-            flash("এই রোল নাম্বারের কোনো স্টুডেন্ট পাওয়া যায়নি!", "error")
+            flash("এই রোল নাম্বারের কোনো স্টুডেন্ট পাওয়া যায়নি!", "error")
             return redirect(url_for("admin.dashboard"))
             
         name = student["name"]
@@ -586,13 +600,12 @@ def manual_attendance():
         section = student.get("section", "")
         semester = student.get("semester", "")
     else:
-        # শিক্ষকদের এক্সেল থেকে ডাটা নাও
         from database import load_teachers_from_excel
         all_teachers = load_teachers_from_excel()
         teacher = next((t for t in all_teachers if t.get("name", "").lower() == identifier.lower()), None)
         
         if not teacher:
-            flash("এই নামের কোনো শিক্ষক পাওয়া যায়নি! (নামের বানান এক্সেলের মতো হতে হবে)", "error")
+            flash("এই নামের কোনো শিক্ষক পাওয়া যায়নি! (নামের বানান এক্সেলের মতো হতে হবে)", "error")
             return redirect(url_for("admin.dashboard"))
             
         name = teacher["name"]
@@ -600,7 +613,6 @@ def manual_attendance():
         section = teacher.get("designation", "")
         semester = ""
 
-    # চেক করো আজকে তার অ্যাটেনডেন্স আগে থেকেই আছে কিনা
     existing = db.query(Attendance).filter(
         Attendance.date == date_str,
         Attendance.roll_number == roll,
@@ -608,12 +620,10 @@ def manual_attendance():
     ).first()
 
     if existing:
-        # যদি থাকে, তাহলে শুধু স্ট্যাটাস আপডেট করো (যেমন Absent থেকে Present)
         existing.status = status
         existing.time = time_str
-        flash(f"{name} এর Attendance আপডেট করা হয়েছে!", "success")
+        flash(f"{name} এর Attendance আপডেট করা হয়েছে!", "success")
     else:
-        # যদি না থাকে, নতুন রেকর্ড তৈরি করো
         new_record = Attendance(
             user_id=roll,
             name=name,
@@ -626,7 +636,7 @@ def manual_attendance():
             semester=semester
         )
         db.add(new_record)
-        flash(f"{name} এর ম্যানুয়াল Attendance সফলভাবে যোগ হয়েছে!", "success")
+        flash(f"{name} এর ম্যানুয়াল Attendance সফলভাবে যোগ হয়েছে!", "success")
 
     db.commit()
     db.close()

@@ -4,14 +4,20 @@ import pickle
 import numpy as np
 import requests
 from datetime import datetime
+import json
+import os
 
 ENCODINGS_FILE = "../models/encodings.pkl"
+OFFLINE_FILE = "offline_queue.json"  
 TOLERANCE = 0.5
 CURRENT_SEMESTER = None
 
-# আপনার ফ্লাস্ক সার্ভারের ঠিকানা (আপাতত লোকাল, লাইভ করার পর এটি পাল্টে লাইভ লিংক দিতে হবে)
+#লোকাল ফ্লাস্ক সার্ভারের ঠিকানা
 #SERVER_URL = "http://127.0.0.1:5000/api/mark-attendance" # লোকাল টেস্টিংয়ের জন্য
+
+# আপনার লাইভ সার্ভারের লিংক
 SERVER_URL = "https://face-recognition-attendance-system-yuhz.onrender.com/api/mark-attendance"
+
 print("[INFO] Encoding লোড হচ্ছে...")
 with open(ENCODINGS_FILE, "rb") as f:
     data = pickle.load(f)
@@ -29,8 +35,66 @@ ROLE_COLORS = {
 already_marked = set()
 already_printed = set()
 
+# ==========================================
+# Offline Sync Functions
+# ==========================================
+def save_offline(payload):
+    queue = []
+    if os.path.exists(OFFLINE_FILE):
+        try:
+            with open(OFFLINE_FILE, "r") as f:
+                queue = json.load(f)
+        except:
+            pass
+            
+    if payload not in queue:
+        queue.append(payload)
+        with open(OFFLINE_FILE, "w") as f:
+            json.dump(queue, f, indent=4)
+
+def sync_offline():
+    if not os.path.exists(OFFLINE_FILE):
+        return
+
+    try:
+        with open(OFFLINE_FILE, "r") as f:
+            queue = json.load(f)
+    except:
+        return
+
+    if not queue:
+        return
+
+    print(f"\n[INFO] ইন্টারনেট পাওয়া গেছে! {len(queue)} টি অফলাইন ডেটা আপলোড হচ্ছে...")
+    unsynced = []
+    
+    for payload in queue:
+        try:
+            # টাইমআউট বাড়িয়ে ১০ সেকেন্ড করা হলো
+            res = requests.post(SERVER_URL, json=payload, timeout=10)
+            if res.status_code != 200:
+                unsynced.append(payload)
+        except:
+            unsynced.append(payload)
+            break
+
+    if unsynced:
+        with open(OFFLINE_FILE, "w") as f:
+            json.dump(unsynced, f, indent=4)
+        print(f"[INFO] {len(unsynced)} টি ডেটা আপলোড করা যায়নি। পরে আবার চেষ্টা করা হবে।")
+    else:
+        if os.path.exists(OFFLINE_FILE):
+            os.remove(OFFLINE_FILE)
+        print("[INFO] সব অফলাইন ডেটা সফলভাবে ক্লাউডে আপলোড হয়েছে!\n")
+
+# ==========================================
+# Main Camera Loop
+# ==========================================
 cap = cv2.VideoCapture(0)
-print("[INFO] ক্যামেরা চালু। বন্ধ করতে 'q' চাপো।")
+print("[INFO] ক্যামেরা চালু। বন্ধ করতে 'q' চাপুন।")
+
+# ম্যাজিক ট্রিক: ক্যামেরা চালুর সাথে সাথেই একবার অফলাইন ডেটাগুলো সিঙ্ক করে নেবে!
+sync_offline()
 
 while True:
     ret, frame = cap.read()
@@ -60,11 +124,9 @@ while True:
                 name = known_names[best_match_index]
                 role = known_roles[best_match_index]
 
-        # Attendance নাও - API এর মাধ্যমে
         status = "Already Marked" if name in already_marked else ""
 
         if name != "Unknown" and name not in already_marked:
-            # সার্ভারে পাঠানোর জন্য ডেটা রেডি করা
             payload = {
                 "name": name,
                 "role": role.rstrip("s"),
@@ -72,8 +134,8 @@ while True:
             }
             
             try:
-                # সার্ভারে রিকোয়েস্ট পাঠানো
-                response = requests.post(SERVER_URL, json=payload, timeout=5)
+                # টাইমআউট বাড়িয়ে ১০ সেকেন্ড করা হলো
+                response = requests.post(SERVER_URL, json=payload, timeout=10)
                 
                 if response.status_code == 200:
                     result_data = response.json()
@@ -87,14 +149,17 @@ while True:
                         already_marked.add(name)
                     else:
                         status = "Failed"
+                        
+                    sync_offline()
+                    
                 else:
-                    status = "Server Error"
+                    status = f"Server Error ({response.status_code})"
                     
             except requests.exceptions.RequestException as e:
-                status = "Offline"
-                # print(f"[ERROR] সার্ভারে কানেক্ট করা যাচ্ছে না: {e}")
+                status = "Saved Offline"
+                save_offline(payload)
+                already_marked.add(name) 
 
-        # Terminal এ একবারই print করো
         if name not in already_printed and name != "Unknown":
             print(f"[INFO] {name} | {status}")
             already_printed.add(name)
@@ -103,7 +168,6 @@ while True:
         face_roles.append(role)
         face_statuses.append(status)
 
-    # বক্স ও নাম সবসময় দেখাও
     for (top, right, bottom, left), name, role, status in zip(
             face_locations, face_names, face_roles, face_statuses):
         top *= 4
@@ -119,7 +183,6 @@ while True:
         cv2.putText(frame, label, (left + 6, bottom - 6),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
 
-    # উপরে date ও time দেখাও
     now_str = datetime.now().strftime("%Y-%m-%d  %H:%M:%S")
     cv2.putText(frame, now_str, (10, 30),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)

@@ -104,6 +104,20 @@ app.register_blueprint(student_bp)
 app.register_blueprint(auth_bp)
 app.register_blueprint(teacher_bp)
 
+@app.route("/keep-alive")
+def keep_alive():
+    # এটি Render এবং Neon ডাটাবেজ দুটোকেই সজাগ রাখবে
+    from database import SessionLocal
+    from sqlalchemy import text
+    db = SessionLocal()
+    try:
+        db.execute(text("SELECT 1"))
+        return "Server and Database are awake!", 200
+    except Exception as e:
+        return f"Error waking up DB: {str(e)}", 500
+    finally:
+        db.close()
+
 if __name__ == "__main__":
     init_db()
     # Render-এর ডায়নামিক পোর্ট নেওয়ার জন্য

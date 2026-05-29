@@ -35,7 +35,7 @@
 <div class="notification-box" style="margin-top: 20px; border-left: 4px solid #d59322;">
     <div>
         <h3>✍️ Manual Attendance Entry</h3>
-        <p>ক্যামেরায় সমস্যা হলে ম্যানুয়ালি attendance দিন</p>
+        <p>ক্যামেরায় সমস্যা হলে ম্যানুয়ালি attendance দিন</p>
     </div>
     <form method="POST" action="{{ url_for('admin.manual_attendance') }}"
         style="display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-top: 10px;">
@@ -69,11 +69,9 @@
     <div style="position:relative; height:230px; width:100%">
         <canvas id="attendanceChart"></canvas>
     </div>
-    <canvas id="attendanceChart"></canvas>
 </div>
 
 
-<!-- ================= PRESENT LIST TABS ================= -->
 <h3>আজকের Attendance List</h3>
 
 <div class="tabs-container">
@@ -81,7 +79,6 @@
     <button class="tab-btn" onclick="switchPresentTab(event, 'teachers-tab')">🧑‍🏫 Teachers</button>
 </div>
 
-<!-- Present Students -->
 <div id="students-tab" class="tab-content active">
     <div style="border-left: 4px solid var(--success); border-radius: 8px; overflow: hidden;">
         <table class="attendance-table" style="margin-top: 0;">
@@ -122,7 +119,6 @@
     </div>
 </div>
 
-<!-- Present Teachers -->
 <div id="teachers-tab" class="tab-content">
     <div style="border-left: 4px solid #8b5cf6; border-radius: 8px; overflow: hidden;">
         <table class="attendance-table" style="margin-top: 0;">
@@ -157,35 +153,30 @@
     </div>
 </div>
 
-<!-- ================= ABSENT LIST TABS ================= -->
 {% if absent_students or absent_teachers %}
 <div style="margin-top: 40px;">
-    <!-- নাম পরিবর্তন করা হয়েছে -->
     <h3>আজকের Absence List</h3>
 
     <div class="tabs-container">
-        <!-- বাটন ডিজাইন ঠিক করা হয়েছে -->
         <button class="tab-btn active" onclick="switchAbsentTab(event, 'absent-students-tab')">👨‍🎓 Students ({{
             absent_students|length }})</button>
         <button class="tab-btn" onclick="switchAbsentTab(event, 'absent-teachers-tab')">🧑‍🏫 Teachers ({{
             absent_teachers|length }})</button>
     </div>
 
-    <!-- Absent Students -->
     <div id="absent-students-tab" class="absent-tab-content active" style="display: block;">
-        <div class="absent-box" style="margin-top: 0;">
+        <div class="absent-box" style="margin-top: 0; border-left: 4px solid #ef4444;">
             {% if absent_students %}
             <div class="absent-grid">
                 {% for s in absent_students %}
-                <div class="absent-card">
+                <div class="absent-card" style="border-left: 2px solid #ef4444;">
                     <div class="absent-name">{{ s.name }}</div>
-                    <div class="absent-roll">Roll: {{ s.roll }}</div>
+                    <div class="absent-roll" style="color: #ef4444; font-weight: bold;">Roll: {{ s.roll }}</div>
                     <div class="absent-section">{{ s.section }}</div>
                 </div>
                 {% endfor %}
             </div>
             {% else %}
-            <!-- লেখা ভেঙে যাওয়া ঠিক করা হয়েছে -->
             <div style="text-align:center; color:var(--text-muted); padding: 20px; width: 100%;">
                 আজ কোনো স্টুডেন্ট অনুপস্থিত নেই!
             </div>
@@ -193,7 +184,6 @@
         </div>
     </div>
 
-    <!-- Absent Teachers -->
     <div id="absent-teachers-tab" class="absent-tab-content" style="display: none;">
         <div class="absent-box" style="margin-top: 0; border-left: 4px solid #fb923c;">
             {% if absent_teachers %}
@@ -206,7 +196,6 @@
                 {% endfor %}
             </div>
             {% else %}
-            <!-- লেখা ভেঙে যাওয়া ঠিক করা হয়েছে -->
             <div style="text-align:center; color:var(--text-muted); padding: 20px; width: 100%;">
                 আজ কোনো শিক্ষক অনুপস্থিত নেই!
             </div>
@@ -216,7 +205,6 @@
 </div>
 {% endif %}
 
-<!-- Low Attendance Alert -->
 {% if low_attendance %}
 <div style="margin-top: 40px;">
     <h3>⚠️ Low Attendance Alert (৭০% এর নিচে)</h3>
@@ -316,7 +304,7 @@
         evt.currentTarget.classList.add("active");
     }
 
-    // Absent Tabs Switcher (জাভাস্ক্রিপ্ট আপডেট করা হয়েছে)
+    // Absent Tabs Switcher 
     function switchAbsentTab(evt, tabId) {
         var tabContents = document.getElementsByClassName("absent-tab-content");
         for (var i = 0; i < tabContents.length; i++) {

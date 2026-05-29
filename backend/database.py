@@ -3,16 +3,23 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 from datetime import datetime
 import pandas as pd
 import os
-from dotenv import load_dotenv
-load_dotenv()
+from dotenv import load_dotenv, find_dotenv
+
+# এটি প্রজেক্টের যেকোনো জায়গা থেকে .env ফাইল ঠিকই খুঁজে নেবে
+load_dotenv(find_dotenv())
 
 # --- Cloud Database Magic Setup ---
 raw_db_url = os.getenv("DATABASE_URL", "sqlite:///../database/attendance.db")
+
+# ডাটাবেজ ঠিকমতো কানেক্ট হচ্ছে কি না, তা টার্মিনালে দেখার জন্য একটি ট্র্যাকার:
+print(f"[DEBUG] Connected DB: {raw_db_url[:13]}...")
 
 if raw_db_url.startswith("postgres://"):
     DATABASE_URL = raw_db_url.replace("postgres://", "postgresql://", 1)
 else:
     DATABASE_URL = raw_db_url
+    
+# ... (ফাইলের বাকি কোড যেমন আছে তেমনই থাকবে)
 
 EXCEL_PATH = "../database/students.xlsx"
 TEACHERS_EXCEL_PATH = "../database/teachers.xlsx"
@@ -21,7 +28,7 @@ TEACHERS_EXCEL_PATH = "../database/teachers.xlsx"
 if DATABASE_URL.startswith("sqlite"):
     engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 else:
-    engine = create_engine(DATABASE_URL)
+    engine = create_engine(DATABASE_URL, pool_pre_ping=True, pool_recycle=300)
 
 SessionLocal = sessionmaker(bind=engine)
 Base = declarative_base()
