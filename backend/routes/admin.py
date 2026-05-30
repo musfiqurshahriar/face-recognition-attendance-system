@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, send_file, redirect, url_for, flash
 from flask_login import login_required, current_user
-from database import SessionLocal, Attendance, load_students_from_excel, get_admin_from_env
+from database import SessionLocal, Attendance, load_students_from_excel, load_teachers_from_excel, get_admin_from_env
 from sqlalchemy import func  # অপ্টিমাইজেশনের জন্য func ইমপোর্ট করা হলো
 import pandas as pd
 import io
@@ -66,7 +66,7 @@ def dashboard():
     today_absent = total_students - today_present
     sections = sorted(list(set([s["section"] for s in students_list if s.get("section")])))
 
-    # স্টুডেন্টদের Absent list-ও সেশন এবং রোল অনুযায়ী সাজানো
+    # St স্টুডেন্টদের Absent list-ও সেশন এবং রোল অনুযায়ী সাজানো
     def student_dict_sort_key(s):
         sec = s.get("section", "0-0")
         try: 
@@ -87,7 +87,7 @@ def dashboard():
     absent_teachers = sorted(absent_teachers, key=lambda x: get_teacher_rank(x.get("designation", "")))
 
     # =========================================================================
-    # OPTIMIZATION 1: Low attendance alert এক কোয়েরিতে আনা (Group By)
+    # OPTIMIZATION 1: Low attendance alert এক কোয়েরিতে আনা (Group By)
     # =========================================================================
     all_dates = db.query(Attendance.date).filter(Attendance.role == "student").distinct().all()
     total_days = len(all_dates)
@@ -118,7 +118,7 @@ def dashboard():
                 })
 
     # =========================================================================
-    # OPTIMIZATION 2: চার্টের শেষ ৭ দিনের ডেটা এক কোয়েরিতে আনা
+    # OPTIMIZATION 2: চার্টের শেষ ৭ দিনের ডেটা এক কোয়েরিতে আনা
     # =========================================================================
     from datetime import datetime, timedelta
     chart_labels = []
@@ -128,7 +128,7 @@ def dashboard():
     # শেষ ৭ দিনের শুরুর তারিখ বের করা
     start_date = (datetime.today() - timedelta(days=6)).strftime("%Y-%m-%d")
     
-    # লুপ ছাড়া একবারে ৭ দিনের ডেটা গ্রুপ বাই করে আনা হলো
+    # লুপ ছাড়া একবারে ৭ দিনের ডেটা গ্রুপ বাই করে আনা হলো
     chart_results = db.query(Attendance.date, func.count(Attendance.roll_number.distinct()))\
         .filter(Attendance.date >= start_date, Attendance.role == "student")\
         .group_by(Attendance.date).all()
@@ -147,6 +147,8 @@ def dashboard():
         chart_absent.append(absent)
 
     db.close()
+    
+    # রিটার্নে ড্রপডাউনের জন্য স্টুডেন্ট ও শিক্ষকদের লিস্ট যোগ করা হলো
     return render_template("admin/dashboard.html",
         today_records=today_records,
         total_students=total_students,
@@ -159,7 +161,9 @@ def dashboard():
         low_attendance=low_attendance,
         chart_labels=chart_labels,
         chart_present=chart_present,
-        chart_absent=chart_absent
+        chart_absent=chart_absent,
+        all_registered_students=students_list, # ফ্রন্টএন্ড ড্রপডাউন ডেটা ১
+        all_registered_teachers=teachers_list   # ফ্রন্টএন্ড ড্রপডাউন ডেটা ২
     )
 
 @admin_bp.route("/attendance")

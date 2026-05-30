@@ -9,12 +9,13 @@ import os
 
 ENCODINGS_FILE = "../models/encodings.pkl"
 OFFLINE_FILE = "offline_queue.json"  
-TOLERANCE = 0.5
+
+# টলারেন্স কমিয়ে ০.৪৫ করা হলো যেন ভুল ফেস ম্যাচ (False Positive) না হয়
+TOLERANCE = 0.45
 CURRENT_SEMESTER = None
-
 #লোকাল ফ্লাস্ক সার্ভারের ঠিকানা
-#SERVER_URL = "http://127.0.0.1:5000/api/mark-attendance" # লোকাল টেস্টিংয়ের জন্য
 
+#SERVER_URL = "http://127.0.0.1:5000/api/mark-attendance" # লোকাল টেস্টিংয়ের জন্য
 # আপনার লাইভ সার্ভারের লিংক
 SERVER_URL = "https://face-recognition-attendance-system-yuhz.onrender.com/api/mark-attendance"
 
@@ -65,12 +66,11 @@ def sync_offline():
     if not queue:
         return
 
-    print(f"\n[INFO] ইন্টারনেট পাওয়া গেছে! {len(queue)} টি অফলাইন ডেটা আপলোড হচ্ছে...")
+    print(f"\n[INFO] ইন্টারনেট পাওয়া গেছে! {len(queue)} টি অফলাইন ডেটা আপলোড হচ্ছে...")
     unsynced = []
     
     for payload in queue:
         try:
-            # টাইমআউট বাড়িয়ে ১০ সেকেন্ড করা হলো
             res = requests.post(SERVER_URL, json=payload, timeout=10)
             if res.status_code != 200:
                 unsynced.append(payload)
@@ -81,11 +81,11 @@ def sync_offline():
     if unsynced:
         with open(OFFLINE_FILE, "w") as f:
             json.dump(unsynced, f, indent=4)
-        print(f"[INFO] {len(unsynced)} টি ডেটা আপলোড করা যায়নি। পরে আবার চেষ্টা করা হবে।")
+        print(f"[INFO] {len(unsynced)} টি ডেটা আপলোড করা যায়নি। পরে আবার চেষ্টা করা হবে।")
     else:
         if os.path.exists(OFFLINE_FILE):
             os.remove(OFFLINE_FILE)
-        print("[INFO] সব অফলাইন ডেটা সফলভাবে ক্লাউডে আপলোড হয়েছে!\n")
+        print("[INFO] সব অফলাইন ডেটা সফলভাবে ক্লাউডে আপলোড হয়েছে!\n")
 
 # ==========================================
 # Main Camera Loop
@@ -93,7 +93,7 @@ def sync_offline():
 cap = cv2.VideoCapture(0)
 print("[INFO] ক্যামেরা চালু। বন্ধ করতে 'q' চাপুন।")
 
-# ম্যাজিক ট্রিক: ক্যামেরা চালুর সাথে সাথেই একবার অফলাইন ডেটাগুলো সিঙ্ক করে নেবে!
+# ক্যামেরা চালুর সাথে সাথেই একবার অফলাইন ডেটাগুলো সিঙ্ক করে নেবে!
 sync_offline()
 
 while True:
@@ -112,6 +112,7 @@ while True:
     face_statuses = []
 
     for face_encoding in face_encodings:
+        # কঠোর ম্যাচিং সিস্টেম
         matches = face_recognition.compare_faces(known_encodings, face_encoding, tolerance=TOLERANCE)
         name = "Unknown"
         role = "Unknown"
@@ -120,7 +121,9 @@ while True:
 
         if len(face_distances) > 0:
             best_match_index = np.argmin(face_distances)
-            if matches[best_match_index]:
+            
+            # ডাবল ভেরিফিকেশন: ম্যাচ ট্রু হতে হবে এবং ডিসটেন্স অবশ্যই টলারেন্সের নিচে থাকতে হবে
+            if matches[best_match_index] and face_distances[best_match_index] <= TOLERANCE:
                 name = known_names[best_match_index]
                 role = known_roles[best_match_index]
 
@@ -134,7 +137,6 @@ while True:
             }
             
             try:
-                # টাইমআউট বাড়িয়ে ১০ সেকেন্ড করা হলো
                 response = requests.post(SERVER_URL, json=payload, timeout=10)
                 
                 if response.status_code == 200:

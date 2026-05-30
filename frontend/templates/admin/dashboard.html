@@ -32,6 +32,7 @@
         </button>
     </form>
 </div>
+
 <div class="notification-box" style="margin-top: 20px; border-left: 4px solid #d59322;">
     <div>
         <h3>✍️ Manual Attendance Entry</h3>
@@ -43,14 +44,28 @@
         <input type="date" name="date" value="{{ today }}" required
             style="background:var(--bg-primary); border:1px solid var(--border); border-radius:8px; padding:7px 12px; color:var(--text-primary);">
 
-        <select name="role" required
+        <select name="role" id="role_selector" required onchange="toggleDatalist()"
             style="background:var(--bg-primary); border:1px solid var(--border); border-radius:8px; padding:7px 12px; color:var(--text-primary);">
             <option value="student">👨‍🎓 Student</option>
             <option value="teacher">🧑‍🏫 Teacher</option>
         </select>
 
-        <input type="text" name="identifier" placeholder="Student Roll বা Teacher Name" required
+        <input type="text" name="identifier" id="target_input" list="student_list"
+            placeholder="Student Roll বা Teacher Name" required
             style="background:var(--bg-primary); border:1px solid var(--border); border-radius:8px; padding:7px 12px; color:var(--text-primary); flex-grow: 1; min-width: 220px;">
+
+        <datalist id="student_list">
+            <option value="All">All Students (একসাথে সব স্টুডেন্ট)</option>
+            {% for student in all_registered_students %}
+            <option value="{{ student.roll }}">{{ student.name }} (Roll: {{ student.roll }})</option>
+            {% endfor %}
+        </datalist>
+
+        <datalist id="teacher_list">
+            {% for teacher in all_registered_teachers %}
+            <option value="{{ teacher.name }}">{{ teacher.name }} ({{ teacher.designation }})</option>
+            {% endfor %}
+        </datalist>
 
         <select name="status" required
             style="background:var(--bg-primary); border:1px solid var(--border); border-radius:8px; padding:7px 12px; color:var(--text-primary);">
@@ -70,7 +85,6 @@
         <canvas id="attendanceChart"></canvas>
     </div>
 </div>
-
 
 <h3>আজকের Attendance List</h3>
 
@@ -110,7 +124,7 @@
                 {% if student_count.value == 0 %}
                 <tr>
                     <td colspan="5" style="text-align:center; color:var(--text-muted); padding: 20px;">
-                        আজ কোনো স্টুডেন্ট উপস্থিত নেই
+                        An আজ কোনো স্টুডেন্ট উপস্থিত নেই
                     </td>
                 </tr>
                 {% endif %}
@@ -241,6 +255,26 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+    // রোল ও রোল টাইপ পরিবর্তনকারী জাভাস্ক্রিপ্ট লজিক
+    function toggleDatalist() {
+        const role = document.getElementById('role_selector').value;
+        const inputField = document.getElementById('target_input');
+
+        if (role === 'student') {
+            inputField.setAttribute('list', 'student_list');
+            inputField.placeholder = "Student Roll বা 'All' লিখুন";
+        } else {
+            inputField.setAttribute('list', 'teacher_list');
+            inputField.placeholder = "Teacher Name সিলেক্ট করুন";
+        }
+        inputField.value = ""; // ফিল্ড রিসেট
+    }
+
+    // উইন্ডো লোড হওয়ার সাথে সাথে ইনিশিয়াল বাইন্ডিং
+    window.onload = function () {
+        toggleDatalist();
+    };
+
     const ctx = document.getElementById('attendanceChart').getContext('2d');
     new Chart(ctx, {
         type: 'bar',
@@ -287,37 +321,31 @@
     }
 });
 
-    // Present Tabs Switcher
     function switchPresentTab(evt, tabId) {
         var tabContents = document.getElementsByClassName("tab-content");
         for (var i = 0; i < tabContents.length; i++) {
             tabContents[i].classList.remove("active");
         }
-
         var container = evt.currentTarget.parentElement;
         var tabButtons = container.getElementsByClassName("tab-btn");
         for (var i = 0; i < tabButtons.length; i++) {
             tabButtons[i].classList.remove("active");
         }
-
         document.getElementById(tabId).classList.add("active");
         evt.currentTarget.classList.add("active");
     }
 
-    // Absent Tabs Switcher 
     function switchAbsentTab(evt, tabId) {
         var tabContents = document.getElementsByClassName("absent-tab-content");
         for (var i = 0; i < tabContents.length; i++) {
             tabContents[i].classList.remove("active");
             tabContents[i].style.display = "none";
         }
-
         var container = evt.currentTarget.parentElement;
         var tabButtons = container.getElementsByClassName("tab-btn");
         for (var i = 0; i < tabButtons.length; i++) {
             tabButtons[i].classList.remove("active");
         }
-
         document.getElementById(tabId).classList.add("active");
         document.getElementById(tabId).style.display = "block";
         evt.currentTarget.classList.add("active");
