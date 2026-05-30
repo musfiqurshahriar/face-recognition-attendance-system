@@ -40,40 +40,41 @@
     </div>
     <form method="POST" action="{{ url_for('admin.manual_attendance') }}"
         style="display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-top: 10px;">
-
+    
         <input type="date" name="date" value="{{ today }}" required
             style="background:var(--bg-primary); border:1px solid var(--border); border-radius:8px; padding:7px 12px; color:var(--text-primary);">
-
+    
         <select name="role" id="role_selector" required onchange="toggleDatalist()"
             style="background:var(--bg-primary); border:1px solid var(--border); border-radius:8px; padding:7px 12px; color:var(--text-primary);">
             <option value="student">👨‍🎓 Student</option>
             <option value="teacher">🧑‍🏫 Teacher</option>
         </select>
-
+    
         <input type="text" name="identifier" id="target_input" list="student_list"
-            placeholder="Student Roll বা Teacher Name" required
-            style="background:var(--bg-primary); border:1px solid var(--border); border-radius:8px; padding:7px 12px; color:var(--text-primary); flex-grow: 1; min-width: 220px;">
-
+            placeholder="Student Roll বা 'All' সিলেক্ট করুন" required
+            style="background:var(--bg-primary); border:1px solid var(--border); border-radius:8px; padding:7px 12px; color:var(--text-primary); width: 280px;">
+    
         <datalist id="student_list">
             <option value="All">All Students (একসাথে সব স্টুডেন্ট)</option>
             {% for student in all_registered_students %}
-            <option value="{{ student.name }}" style="color: red;">Roll: {{ student.roll }}</option>
+            <option value="{{ student.name }}">[Roll: {{ student.roll }}]</option>
             {% endfor %}
         </datalist>
-
+    
         <datalist id="teacher_list">
             {% for teacher in all_registered_teachers %}
-            <option value="{{ teacher.name }}" style="color: orange;>{{ teacher.designation }}</option>
+            <option value="{{ teacher.name }}">({{ teacher.designation }})</option>
             {% endfor %}
         </datalist>
-
+    
         <select name="status" required
             style="background:var(--bg-primary); border:1px solid var(--border); border-radius:8px; padding:7px 12px; color:var(--text-primary);">
             <option value="On Time">Present (On Time)</option>
             <option value="Late">Present (Late)</option>
         </select>
-
-        <button type="submit" class="btn-primary" style="background-color: #d59322; border-color: #d59322;">
+    
+        <button type="submit" class="btn-primary"
+            style="background-color: #d59322; border-color: #d59322; padding: 7px 15px; border-radius: 8px; color: white; cursor: pointer;">
             Submit
         </button>
     </form>
@@ -262,7 +263,7 @@
 
         if (role === 'student') {
             inputField.setAttribute('list', 'student_list');
-            inputField.placeholder = "Student Roll বা 'All' সিলেক্ট করুন";
+            inputField.placeholder = "Student Name বা 'All' সিলেক্ট করুন বা Roll লিখুন";
         } else {
             inputField.setAttribute('list', 'teacher_list');
             inputField.placeholder = "Teacher Name সিলেক্ট করুন";
