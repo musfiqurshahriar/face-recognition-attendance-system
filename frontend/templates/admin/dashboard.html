@@ -52,7 +52,7 @@
     
         <input type="text" name="identifier" id="target_input" list="student_list"
             placeholder="Student Roll বা 'All' সিলেক্ট করুন" required
-            style="background:var(--bg-primary); border:1px solid var(--border); border-radius:8px; padding:7px 12px; color:var(--text-primary); width: 310px;">
+            style="background:var(--bg-primary); border:1px solid var(--border); border-radius:8px; padding:7px 12px; color:var(--text-primary); width: 300px;">
     
         <datalist id="student_list">
             <option value="All">All Students (একসাথে সব স্টুডেন্ট)</option>
@@ -125,7 +125,7 @@
                 {% if student_count.value == 0 %}
                 <tr>
                     <td colspan="5" style="text-align:center; color:var(--text-muted); padding: 20px;">
-                        An আজ কোনো স্টুডেন্ট উপস্থিত নেই
+                        আজ কোনো স্টুডেন্ট উপস্থিত নেই
                     </td>
                 </tr>
                 {% endif %}
@@ -263,7 +263,7 @@
 
         if (role === 'student') {
             inputField.setAttribute('list', 'student_list');
-            inputField.placeholder = "Student Name বা 'All' সিলেক্ট করুন বা Roll লিখুন";
+            inputField.placeholder = "Student Roll লিখুন বা 'All' সিলেক্ট করুন";
         } else {
             inputField.setAttribute('list', 'teacher_list');
             inputField.placeholder = "Teacher Name সিলেক্ট করুন";
