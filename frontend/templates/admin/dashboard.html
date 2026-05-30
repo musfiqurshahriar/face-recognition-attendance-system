@@ -57,13 +57,13 @@
         <datalist id="student_list">
             <option value="All">All Students (একসাথে সব স্টুডেন্ট)</option>
             {% for student in all_registered_students %}
-            <option value="{{ student.roll }}">{{ student.name }} (Roll: {{ student.roll }})</option>
+            <option value="{{ student.name }}" style="color: red;">Roll: {{ student.roll }}</option>
             {% endfor %}
         </datalist>
 
         <datalist id="teacher_list">
             {% for teacher in all_registered_teachers %}
-            <option value="{{ teacher.name }}">{{ teacher.name }} ({{ teacher.designation }})</option>
+            <option value="{{ teacher.name }}" style="color: orange;>{{ teacher.designation }}</option>
             {% endfor %}
         </datalist>
 
@@ -262,7 +262,7 @@
 
         if (role === 'student') {
             inputField.setAttribute('list', 'student_list');
-            inputField.placeholder = "Student Roll বা 'All' লিখুন";
+            inputField.placeholder = "Student Roll বা 'All' সিলেক্ট করুন";
         } else {
             inputField.setAttribute('list', 'teacher_list');
             inputField.placeholder = "Teacher Name সিলেক্ট করুন";
