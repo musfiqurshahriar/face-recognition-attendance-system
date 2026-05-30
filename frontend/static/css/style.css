@@ -7,7 +7,7 @@
 /* =========================================================
    DARK THEME (Default)
 ========================================================= */
-:root {
+/* :root {
     --bg-primary: #0f1117;
     --bg-secondary: #161b27;
     --bg-card: #1a2035;
@@ -26,6 +26,41 @@
     --danger: #f87171;
     --danger-bg: #2a1a1a;
     --danger-border: #3d1f1f;
+} */
+
+/* =========================================================
+   DARK THEME (Premium Studio / OLED Black)
+========================================================= */
+:root {
+    /* Backgrounds: নীলচে কালোর বদলে 'স্টুডিও ব্ল্যাক' যা অনেক বেশি প্রফেশনাল */
+    --bg-primary: #0a0a0a;
+    --bg-secondary: #141414;
+    --bg-card: #1c1c1c;
+
+    /* Borders: আগের চেয়ে অনেক সূক্ষ্ম এবং ক্লিন */
+    --border: #2e2e2e;
+
+    /* Typography: নীলচে সাদার বদলে শার্প ও ক্রিস্প অফ-হোয়াইট (OLED-এ দারুণ লাগে) */
+    --text-primary: #f5f5f5;
+    --text-secondary: #a1a1aa;
+    --text-muted: #71717a;
+
+    /* Primary Accent: ভাইব্রেন্ট কিন্তু রুচিশীল 'সিগনেচার ইন্ডিগো' */
+    --accent: #4f46e5;
+    --accent-hover: #6366f1;
+
+    /* Status Colors: কড়া রঙের বদলে সফট গ্লোয়িং ডার্ক টোন */
+    --success: #34d399;
+    --success-bg: #022c22;
+    --success-border: #064e3b;
+
+    --warning: #fbbf24;
+    --warning-bg: #422006;
+    --warning-border: #713f12;
+
+    --danger: #f87171;
+    --danger-bg: #450a0a;
+    --danger-border: #7f1d1d;
 }
 
 /* =========================================================
