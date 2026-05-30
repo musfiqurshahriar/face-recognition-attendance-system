@@ -995,3 +995,26 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 .light-theme input[type="date"]::-webkit-calendar-picker-indicator:hover {
     opacity: 1;
 }
+
+/* =========================================================
+   Mobile Date Picker Text Visibility Fix
+========================================================= */
+/* মোবাইলে টেক্সট সেন্টার করলে লেখা গায়েব হয়ে যায়, তাই এটি লেফটে আনা হলো */
+@media (max-width: 768px) {
+    .filter-form input[type="date"] {
+        text-align: left !important;
+        padding-left: 16px !important;
+        min-height: 42px !important;
+    }
+}
+
+/* সব ব্রাউজারে তারিখের লেখার কালার যেন স্পষ্ট থাকে তা নিশ্চিত করা */
+input[type="date"],
+input[type="date"]::-webkit-datetime-edit {
+    color: var(--text-primary) !important;
+}
+
+/* যদি ডেট সিলেক্ট করা না থাকে (Placeholder), তখনো যেন লেখা দেখা যায় */
+input[type="date"]:invalid::-webkit-datetime-edit {
+    color: var(--text-muted) !important;
+}
