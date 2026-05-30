@@ -4,6 +4,9 @@
     box-sizing: border-box;
 }
 
+/* =========================================================
+   DARK THEME (Default)
+========================================================= */
 :root {
     --bg-primary: #0f1117;
     --bg-secondary: #161b27;
@@ -25,11 +28,127 @@
     --danger-border: #3d1f1f;
 }
 
+/* =========================================================
+   LIGHT THEME 
+========================================================= */
+
+/* :root.light-theme {
+    --bg-primary: #f4f7fa;
+    --bg-secondary: #ffffff;
+    --bg-card: #f9fafc;
+    --border: #e2e8f0;
+    --text-primary: #1e293b;
+    --text-secondary: #475569;
+    --text-muted: #94a3b8;
+    --accent: #4f46e5;
+    --accent-hover: #4338ca;
+    --success: #10b981;
+    --success-bg: #d1fae5;
+    --success-border: #a7f3d0;
+    --warning: #f59e0b;
+    --warning-bg: #fef3c7;
+    --warning-border: #fde68a;
+    --danger: #ef4444;
+    --danger-bg: #fee2e2;
+    --danger-border: #fecaca;
+} 
+*/
+
+/* =========================================================
+   LIGHT THEME (Eye-Pleasing & Soft)
+========================================================= */
+
+/* :root.light-theme {
+    --bg-primary: #f0f2f5;       
+    --bg-secondary: #ffffff;     
+    --bg-card: #ffffff;          
+    
+    --border: #e2e8f0;           
+    
+    --text-primary: #334155;     
+    --text-secondary: #64748b;
+    --text-muted: #94a3b8;
+    
+    --accent: #3b82f6;           
+    --accent-hover: #2563eb;
+    
+    --success: #059669;
+    --success-bg: #ecfdf5;
+    --success-border: #a7f3d0;
+    
+    --warning: #d97706;
+    --warning-bg: #fffbeb;
+    --warning-border: #fde68a;
+    
+    --danger: #dc2626;
+    --danger-bg: #fef2f2;
+    --danger-border: #fecaca;
+}
+*/
+
+/* =========================================================
+   LIGHT THEME (Ultra-Premium & Minimalist)
+========================================================= */
+:root.light-theme {
+    /* Backgrounds: Apple-এর মতো সিগনেচার 'সিলভার গ্রে' ব্যাকগ্রাউন্ড */
+    --bg-primary: #f5f5f7;
+    --bg-secondary: #ffffff;
+    --bg-card: #ffffff;
+
+    /* Borders: অত্যন্ত সূক্ষ্ম এবং ক্লিন বর্ডার */
+    --border: #e5e5ea;
+
+    /* Typography: কড়া কালোর বদলে 'ডিপ রিচ গ্রে' (খুবই প্রিমিয়াম লুক দেয়) */
+    --text-primary: #1d1d1f;
+    --text-secondary: #86868b;
+    --text-muted: #a1a1a6;
+
+    /* Primary Accent: ভাইব্রেন্ট কিন্তু রুচিশীল 'সিগনেচার ব্লু' */
+    --accent: #0071e3;
+    --accent-hover: #0077ed;
+
+    /* Status Colors: অত্যন্ত ক্লিন প্যাস্টেল ব্যাকগ্রাউন্ড এবং রিচ টেক্সট */
+    --success: #15803d;
+    --success-bg: #f0fdf4;
+    --success-border: #bbf7d0;
+
+    --warning: #b45309;
+    --warning-bg: #fffbeb;
+    --warning-border: #fef08a;
+
+    --danger: #dc2626;
+    --danger-bg: #fef2f2;
+    --danger-border: #fecaca;
+}
+
+
 body {
     font-family: 'Segoe UI', Arial, sans-serif;
     background: var(--bg-primary);
     color: var(--text-primary);
     min-height: 100vh;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Theme Toggle Button */
+.theme-btn {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    font-size: 16px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 4px;
+}
+
+.theme-btn:hover {
+    background: var(--border);
+    transform: scale(1.05);
 }
 
 /* Navbar */
@@ -43,6 +162,7 @@ body {
     position: sticky;
     top: 0;
     z-index: 100;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .nav-brand {
@@ -160,12 +280,12 @@ h3 {
     padding: 20px;
     position: relative;
     overflow: hidden;
-    transition: border-color 0.2s, transform 0.2s;
+    transition: border-color 0.2s, transform 0.2s, background-color 0.3s ease;
     cursor: default;
 }
 
 .stat-card:hover {
-    border-color: #2e3650;
+    border-color: var(--accent);
     transform: translateY(-2px);
 }
 
@@ -211,6 +331,7 @@ h3 {
     border-collapse: separate;
     border-spacing: 0;
     overflow: hidden;
+    transition: background-color 0.3s ease;
 }
 
 .attendance-table th {
@@ -263,9 +384,9 @@ h3 {
 }
 
 .badge-present {
-    background: #1a1535;
-    color: #818cf8;
-    border: 1px solid #2e2560;
+    background: var(--bg-card);
+    color: var(--accent);
+    border: 1px solid var(--border);
 }
 
 .badge-already-marked {
@@ -291,7 +412,7 @@ h3 {
     padding: 8px 12px;
     font-size: 13px;
     color: var(--text-primary);
-    transition: border-color 0.2s;
+    transition: border-color 0.2s, background-color 0.3s ease;
 }
 
 .filter-form input:focus,
@@ -325,7 +446,7 @@ h3 {
 }
 
 .btn-success {
-    background: #0d2e1f;
+    background: var(--success-bg);
     color: var(--success);
     border: 1px solid var(--success-border);
     padding: 8px 18px;
@@ -338,7 +459,7 @@ h3 {
 }
 
 .btn-success:hover {
-    background: #0f3d28;
+    opacity: 0.8;
     transform: translateY(-1px);
 }
 
@@ -355,7 +476,7 @@ h3 {
 }
 
 .btn-danger:hover {
-    background: #3d1f1f;
+    opacity: 0.8;
     transform: translateY(-1px);
 }
 
@@ -370,6 +491,7 @@ h3 {
     align-items: center;
     justify-content: space-between;
     gap: 16px;
+    transition: background-color 0.3s ease;
 }
 
 .notification-box h3 {
@@ -434,7 +556,7 @@ h3 {
     padding: 10px 14px;
     font-size: 14px;
     color: var(--text-primary);
-    transition: border-color 0.2s;
+    transition: border-color 0.2s, background-color 0.3s ease;
 }
 
 .form-group input:focus {
@@ -485,6 +607,7 @@ h3 {
     border-radius: 12px;
     padding: 28px;
     max-width: 500px;
+    transition: background-color 0.3s ease;
 }
 
 .upload-box p {
@@ -499,7 +622,7 @@ h3 {
     padding: 2px 6px;
     border-radius: 4px;
     font-size: 12px;
-    color: #818cf8;
+    color: var(--accent);
 }
 
 .upload-box input[type="file"] {
@@ -529,7 +652,7 @@ h3 {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: #2e3650;
+    background: var(--text-muted);
 }
 
 /* Chart */
@@ -539,6 +662,7 @@ h3 {
     border-radius: 12px;
     padding: 20px;
     margin-bottom: 20px;
+    transition: background-color 0.3s ease;
 }
 
 .chart-box h3 {
@@ -553,6 +677,7 @@ h3 {
     padding: 20px;
     margin-bottom: 20px;
     border-left: 4px solid var(--warning);
+    transition: background-color 0.3s ease;
 }
 
 .alert-box h3 {
@@ -568,6 +693,7 @@ h3 {
     padding: 20px;
     margin-bottom: 20px;
     border-left: 4px solid var(--danger);
+    transition: background-color 0.3s ease;
 }
 
 .absent-box h3 {
@@ -585,11 +711,11 @@ h3 {
     border: 1px solid var(--border);
     border-radius: 8px;
     padding: 12px;
-    transition: border-color 0.2s;
+    transition: border-color 0.2s, background-color 0.3s ease;
 }
 
 .absent-card:hover {
-    border-color: var(--danger-border);
+    border-color: var(--danger);
 }
 
 .absent-name {
@@ -630,7 +756,6 @@ h3 {
    Responsive Design (Media Queries)
 ========================================================= */
 
-/* Hamburger button — desktop এ লুকানো */
 .hamburger {
     display: none;
     background: none;
@@ -648,8 +773,6 @@ h3 {
 }
 
 @media (max-width: 768px) {
-
-    /* Navbar */
     .navbar {
         flex-wrap: wrap;
         padding: 12px 16px;
@@ -673,10 +796,13 @@ h3 {
         display: flex;
     }
 
-    .nav-links a {
+    .nav-links a,
+    .theme-btn {
         width: 100%;
         padding: 10px 14px;
         border-radius: 8px;
+        text-align: center;
+        margin: 4px 0;
     }
 
     .logout-btn {
@@ -684,13 +810,11 @@ h3 {
         text-align: center;
     }
 
-    /* Container */
     .container {
         padding: 0 12px;
         margin: 16px auto;
     }
 
-    /* Filter form */
     .filter-form {
         flex-direction: column;
         align-items: stretch;
@@ -704,7 +828,6 @@ h3 {
         text-align: center;
     }
 
-    /* Notification box */
     .notification-box {
         flex-direction: column;
         align-items: flex-start;
@@ -720,30 +843,25 @@ h3 {
         width: 100%;
     }
 
-    /* Stats */
     .stats-grid {
         grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
     }
 
-    /* Table */
     .attendance-table {
         display: block;
         overflow-x: auto;
         white-space: nowrap;
     }
 
-    /* Login */
     .login-box {
         padding: 24px 16px;
         margin: 0 12px;
     }
 
-    /* Absent grid */
     .absent-grid {
         grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
     }
 
-    /* Fonts */
     h2 {
         font-size: 18px;
     }
@@ -771,6 +889,7 @@ h3 {
         font-size: 13px;
     }
 }
+
 /* =========================================================
    Modern Tabs Layout
 ========================================================= */
@@ -807,13 +926,11 @@ h3 {
     color: #fff;
 }
 
-/* ডিফল্টভাবে ট্যাব কন্টেন্ট হাইড থাকবে */
 .tab-content {
     display: none;
     animation: fadeIn 0.3s ease;
 }
 
-/* একটিভ ট্যাব শো করবে */
 .tab-content.active {
     display: block;
 }

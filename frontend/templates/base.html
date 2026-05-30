@@ -6,6 +6,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Face Recognition Attendance System</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script>
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        if (savedTheme === 'light') {
+            document.documentElement.classList.add('light-theme');
+        }
+    </script>
 </head>
 
 <body>
@@ -36,6 +42,10 @@
             <a href="{{ url_for('teacher.dashboard') }}"
                 class="{{ 'nav-active' if request.endpoint == 'teacher.dashboard' else '' }}">আমার Dashboard</a>
             {% endif %}
+
+            <button onclick="toggleTheme()" id="theme-toggle-btn" class="theme-btn"
+                title="Toggle Light/Dark Mode">☀️</button>
+
             <a href="{{ url_for('auth.logout') }}" class="logout-btn">Logout</a>
         </div>
     </nav>
@@ -59,13 +69,36 @@
             btn.textContent = nav.classList.contains('open') ? '✕' : '☰';
         }
 
-        // অন্য জায়গায় click করলে menu বন্ধ হবে
         document.addEventListener('click', function (e) {
             const nav = document.getElementById('nav-links');
             const btn = document.getElementById('hamburger');
             if (nav && btn && !nav.contains(e.target) && !btn.contains(e.target)) {
                 nav.classList.remove('open');
                 btn.textContent = '☰';
+            }
+        });
+
+        // থিম টগল করার ম্যাজিক ফাংশন
+        function toggleTheme() {
+            const root = document.documentElement;
+            const btn = document.getElementById('theme-toggle-btn');
+
+            root.classList.toggle('light-theme');
+
+            if (root.classList.contains('light-theme')) {
+                localStorage.setItem('theme', 'light');
+                btn.textContent = '🌙'; // লাইট মোডে চাঁদের আইকন দেখাবে
+            } else {
+                localStorage.setItem('theme', 'dark');
+                btn.textContent = '☀️'; // ডার্ক মোডে সূর্যের আইকন দেখাবে
+            }
+        }
+
+        // পেজ লোড হওয়ার পর আইকন আপডেট করা
+        window.addEventListener('DOMContentLoaded', () => {
+            const btn = document.getElementById('theme-toggle-btn');
+            if (btn) {
+                btn.textContent = document.documentElement.classList.contains('light-theme') ? '🌙' : '☀️';
             }
         });
     </script>
