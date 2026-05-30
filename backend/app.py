@@ -131,6 +131,7 @@ def manual_attendance_fallback():
             flash(f"সফলভাবে মোট {count} জন শিক্ষার্থীর বাল্ক হাজিরা নেওয়া হয়েছে।", "success")
         
         # ২. সিঙ্গেল স্টুডেন্ট বা টিচারের হাজিরা
+        # ২. সিঙ্গেল স্টুডেন্ট বা টিচারের হাজিরা
         else:
             target_name = identifier
             target_roll = ""
@@ -140,18 +141,28 @@ def manual_attendance_fallback():
 
             if role == "student":
                 all_students = load_students_from_excel()
-                student_match = next((s for s in all_students if str(s.get("roll")) == identifier), None)
+                # স্মার্ট সার্চ: রোল অথবা নাম যেকোনো একটা দিলেই স্টুডেন্টকে খুঁজে বের করবে
+                student_match = next((s for s in all_students if str(s.get("roll")) == identifier or s.get("name").lower() == identifier.lower()), None)
+                
                 if student_match:
                     target_name = student_match["name"]
                     target_roll = student_match.get("roll", "")
                     target_section = student_match.get("section", "")
                     target_semester = student_match.get("semester", "")
+                else:
+                    # যদি ভুল নাম বা রোল দেয়, তবে ডেটা সেভ না করে এরর মেসেজ দেবে
+                    flash(f"দুঃখিত, '{identifier}' নামে বা রোলে কোনো স্টুডেন্ট ডাটাবেজে পাওয়া যায়নি!", "danger")
+                    return redirect("/admin/dashboard")
             else:
                 all_teachers = load_teachers_from_excel()
-                teacher_match = next((t for t in all_teachers if t["name"] == identifier), None)
+                teacher_match = next((t for t in all_teachers if t["name"].lower() == identifier.lower()), None)
+                
                 if teacher_match:
                     target_name = teacher_match["name"]
                     target_section = teacher_match.get("designation", "")
+                else:
+                    flash(f"দুঃখিত, '{identifier}' নামে কোনো শিক্ষক পাওয়া যায়নি!", "danger")
+                    return redirect("/admin/dashboard")
 
             # ডুপ্লিকেট চেক
             exists = db.query(Attendance).filter(Attendance.name == target_name, Attendance.date == custom_date).first()
