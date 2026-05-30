@@ -969,3 +969,29 @@ h3 {
 .tab-content.active {
     display: block;
 }
+
+/* =========================================================
+   Date Picker Icon Fix for Dark/Light Mode
+========================================================= */
+/* ডার্ক থিমে (ডিফল্ট) ক্যালেন্ডার আইকনটি উল্টে সাদা করে দেবে */
+input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+    cursor: pointer;
+    opacity: 0.7;
+    /* দেখতে আরেকটু প্রিমিয়াম লাগার জন্য অপাসিটি কমানো হলো */
+    transition: opacity 0.2s;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+}
+
+/* লাইট থিমে ক্যালেন্ডার আইকনটি আবার স্বাভাবিক (কালো) করে দেবে */
+.light-theme input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: none;
+    opacity: 0.6;
+}
+
+.light-theme input[type="date"]::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+}
