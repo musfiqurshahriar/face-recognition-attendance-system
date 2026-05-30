@@ -42,17 +42,17 @@
         style="display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-top: 10px;">
     
         <input type="date" name="date" value="{{ today }}" required
-            style="background:var(--bg-primary); border:1px solid var(--border); border-radius:8px; padding:7px 12px; color:var(--text-primary);">
+            style="background:var(--bg-primary); border:1px solid var(--border); border-radius:8px; padding:7px 12px; color:var(--text-primary); width: 280px;">
     
         <select name="role" id="role_selector" required onchange="toggleDatalist()"
-            style="background:var(--bg-primary); border:1px solid var(--border); border-radius:8px; padding:7px 12px; color:var(--text-primary);">
+            style="background:var(--bg-primary); border:1px solid var(--border); border-radius:8px; padding:7px 12px; color:var(--text-primary); width: 280px;">
             <option value="student">👨‍🎓 Student</option>
             <option value="teacher">🧑‍🏫 Teacher</option>
         </select>
     
         <input type="text" name="identifier" id="target_input" list="student_list"
             placeholder="Student Roll বা 'All' সিলেক্ট করুন" required
-            style="background:var(--bg-primary); border:1px solid var(--border); border-radius:8px; padding:7px 12px; color:var(--text-primary); width: 300px;">
+            style="background:var(--bg-primary); border:1px solid var(--border); border-radius:8px; padding:7px 12px; color:var(--text-primary); width: 280px;">
     
         <datalist id="student_list">
             <option value="All">All Students (একসাথে সব স্টুডেন্ট)</option>
@@ -68,13 +68,13 @@
         </datalist>
     
         <select name="status" required
-            style="background:var(--bg-primary); border:1px solid var(--border); border-radius:8px; padding:7px 12px; color:var(--text-primary);">
+            style="background:var(--bg-primary); border:1px solid var(--border); border-radius:8px; padding:7px 12px; color:var(--text-primary); width: 280px;">
             <option value="On Time">Present (On Time)</option>
             <option value="Late">Present (Late)</option>
         </select>
     
         <button type="submit" class="btn-primary"
-            style="background-color: #d59322; border-color: #d59322; padding: 7px 15px; border-radius: 8px; color: white; cursor: pointer;">
+            style="background-color: #d59322; border-color: #d59322; padding: 7px 15px; border-radius: 8px; color: white; cursor: pointer; width: 280px;">
             Submit
         </button>
     </form>
