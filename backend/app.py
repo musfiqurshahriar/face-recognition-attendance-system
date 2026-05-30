@@ -90,8 +90,11 @@ def api_mark_attendance():
 # আপনার কোড স্ট্রাকচার অনুযায়ী এই রাউটটি /routes/admin.py ফাইলে থাকতে পারে। 
 # যদি সেখানে থাকে, তবে এই ফাংশনটি শুধু কেটে নিয়ে সেখানে বসিয়ে দিন।
 @app.route("/admin/manual-attendance", methods=["POST"])
-@login_required
-def manual_attendance():
+def manual_attendance_fallback():
+    from database import SessionLocal, Attendance, load_students_from_excel, load_teachers_from_excel
+    from flask import request, flash, redirect
+    from datetime import datetime
+
     role = request.form.get("role")
     identifier = request.form.get("identifier", "").strip()
     status = request.form.get("status", "On Time")
@@ -99,38 +102,85 @@ def manual_attendance():
 
     if not custom_date:
         custom_date = datetime.now().strftime("%Y-%m-%d")
+    
+    time_str = datetime.now().strftime("%I:%M %p")
+    db = SessionLocal()
 
-    # কাস্টম ডেট সাপোর্ট করার জন্য attendance_manager এর ফাংশনে ডেট ওভাররাইড লজিক পাঠানো হচ্ছে
-    if role == "student" and identifier.lower() == "all":
-        # ডাটাবেজ/এক্সেল থেকে সব স্টুডেন্ট নিয়ে আসা
-        all_students = load_students_from_excel()
-        count = 0
-        for student in all_students:
-            res = mark_attendance(name=student["name"], role="students", status=status, custom_date=custom_date)
-            if res and res != "duplicate":
-                count += 1
-        flash(f"সফলভাবে মোট {count} জন শিক্ষার্থীর বাল্ক হাজিরা নেওয়া হয়েছে।", "success")
-    else:
-        # সিঙ্গেল ছাত্র অথবা শিক্ষকের ম্যানুয়াল এন্ট্রি
-        target_name = identifier
-        if role == "student":
+    try:
+        # ১. "All" সিলেক্ট করলে সব স্টুডেন্টের হাজিরা
+        if role == "student" and identifier.lower() == "all":
             all_students = load_students_from_excel()
-            student_match = next((s for s in all_students if s["roll"] == identifier), None)
-            if student_match:
-                target_name = student_match["name"]
-            role_param = "students"
+            count = 0
+            for student in all_students:
+                exists = db.query(Attendance).filter(Attendance.name == student["name"], Attendance.date == custom_date).first()
+                if not exists:
+                    new_record = Attendance(
+                        user_id=student.get("roll", student["name"]),
+                        name=student["name"],
+                        role="student",
+                        roll_number=student.get("roll", ""),
+                        section=student.get("section", ""),
+                        date=custom_date,
+                        time=time_str,
+                        status=status,
+                        semester=student.get("semester", "")
+                    )
+                    db.add(new_record)
+                    count += 1
+            db.commit()
+            flash(f"সফলভাবে মোট {count} জন শিক্ষার্থীর বাল্ক হাজিরা নেওয়া হয়েছে।", "success")
+        
+        # ২. সিঙ্গেল স্টুডেন্ট বা টিচারের হাজিরা
         else:
-            role_param = "teacher"
+            target_name = identifier
+            target_roll = ""
+            target_section = ""
+            target_semester = ""
+            db_role = "student" if role == "student" else "teacher"
 
-        res = mark_attendance(name=target_name, role=role_param, status=status, custom_date=custom_date)
-        if res == "duplicate":
-            flash(f"দুঃখিত, {target_name} এর হাজিরা আজ আগেই নেওয়া হয়েছে!", "danger")
-        elif res:
-            flash(f"সফলভাবে {target_name} এর ম্যানুয়াল হাজিরা নেওয়া হয়েছে।", "success")
-        else:
-            flash("হাজিরা নিতে ব্যর্থ! তথ্যগুলো আবার যাচাই করুন।", "danger")
+            if role == "student":
+                all_students = load_students_from_excel()
+                student_match = next((s for s in all_students if str(s.get("roll")) == identifier), None)
+                if student_match:
+                    target_name = student_match["name"]
+                    target_roll = student_match.get("roll", "")
+                    target_section = student_match.get("section", "")
+                    target_semester = student_match.get("semester", "")
+            else:
+                all_teachers = load_teachers_from_excel()
+                teacher_match = next((t for t in all_teachers if t["name"] == identifier), None)
+                if teacher_match:
+                    target_name = teacher_match["name"]
+                    target_section = teacher_match.get("designation", "")
 
-    return redirect(url_for('admin.dashboard'))
+            # ডুপ্লিকেট চেক
+            exists = db.query(Attendance).filter(Attendance.name == target_name, Attendance.date == custom_date).first()
+            if exists:
+                flash(f"দুঃখিত, {target_name} এর হাজিরা আজ আগেই নেওয়া হয়েছে!", "danger")
+            else:
+                new_record = Attendance(
+                    user_id=target_roll if target_roll else target_name,
+                    name=target_name,
+                    role=db_role,
+                    roll_number=target_roll,
+                    section=target_section,
+                    date=custom_date,
+                    time=time_str,
+                    status=status,
+                    semester=target_semester
+                )
+                db.add(new_record)
+                db.commit()
+                flash(f"সফলভাবে {target_name} এর ম্যানুয়াল হাজিরা নেওয়া হয়েছে।", "success")
+
+    except Exception as e:
+        db.rollback()
+        print(f"Error: {e}")
+    finally:
+        db.close()
+
+    # রিডাইরেক্ট করে ড্যাশবোর্ডে পাঠিয়ে দেবে
+    return redirect("/admin/dashboard")
 
 
 from routes.admin import admin_bp
