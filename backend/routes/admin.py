@@ -584,71 +584,93 @@ def export_percentage():
 @login_required
 @admin_required
 def manual_attendance():
-    db = SessionLocal()
-    date_str = request.form.get("date")
-    role = request.form.get("role")
-    identifier = request.form.get("identifier") 
-    status = request.form.get("status")
-
+    from database import SessionLocal, Attendance, load_students_from_excel, load_teachers_from_excel
+    from flask import request, flash, redirect, url_for
     from datetime import datetime
-    time_str = datetime.now().strftime("%H:%M:%S")
 
-    name = ""
-    section = ""
-    semester = ""
-    roll = ""
+    role = request.form.get("role")
+    identifier = request.form.get("identifier", "").strip()
+    status = request.form.get("status", "On Time")
+    custom_date = request.form.get("date")
 
-    if role == "student":
-        all_students = load_students_from_excel()
-        student = next((s for s in all_students if str(s.get("roll")) == str(identifier)), None)
+    if not custom_date:
+        custom_date = datetime.now().strftime("%Y-%m-%d")
+    
+    time_str = datetime.now().strftime("%I:%M %p")
+    db = SessionLocal()
+
+    try:
+        # ১. "All" সিলেক্ট করলে সব স্টুডেন্টের হাজিরা
+        if role == "student" and identifier.lower() == "all":
+            all_students = load_students_from_excel()
+            count = 0
+            for student in all_students:
+                # আগে চেক করবে এই ডেটে হাজিরা আছে কি না
+                exists = db.query(Attendance).filter(Attendance.name == student["name"], Attendance.date == custom_date).first()
+                if not exists:
+                    new_record = Attendance(
+                        user_id=student.get("roll", student["name"]),
+                        name=student["name"],
+                        role="student",
+                        roll_number=student.get("roll", ""),
+                        section=student.get("section", ""),
+                        date=custom_date,
+                        time=time_str,
+                        status=status,
+                        semester=student.get("semester", "")
+                    )
+                    db.add(new_record)
+                    count += 1
+            db.commit()
+            flash(f"সফলভাবে মোট {count} জন শিক্ষার্থীর বাল্ক হাজিরা নেওয়া হয়েছে।", "success")
         
-        if not student:
-            flash("এই রোল নাম্বারের কোনো স্টুডেন্ট পাওয়া যায়নি!", "error")
-            return redirect(url_for("admin.dashboard"))
-            
-        name = student["name"]
-        roll = student["roll"]
-        section = student.get("section", "")
-        semester = student.get("semester", "")
-    else:
-        from database import load_teachers_from_excel
-        all_teachers = load_teachers_from_excel()
-        teacher = next((t for t in all_teachers if t.get("name", "").lower() == identifier.lower()), None)
-        
-        if not teacher:
-            flash("এই নামের কোনো শিক্ষক পাওয়া যায়নি! (নামের বানান এক্সেলের মতো হতে হবে)", "error")
-            return redirect(url_for("admin.dashboard"))
-            
-        name = teacher["name"]
-        roll = name
-        section = teacher.get("designation", "")
-        semester = ""
+        # ২. সিঙ্গেল স্টুডেন্ট বা টিচারের হাজিরা
+        else:
+            target_name = identifier
+            target_roll = ""
+            target_section = ""
+            target_semester = ""
+            db_role = "student" if role == "student" else "teacher"
 
-    existing = db.query(Attendance).filter(
-        Attendance.date == date_str,
-        Attendance.roll_number == roll,
-        Attendance.role == role
-    ).first()
+            if role == "student":
+                all_students = load_students_from_excel()
+                student_match = next((s for s in all_students if str(s.get("roll")) == identifier), None)
+                if student_match:
+                    target_name = student_match["name"]
+                    target_roll = student_match.get("roll", "")
+                    target_section = student_match.get("section", "")
+                    target_semester = student_match.get("semester", "")
+            else:
+                all_teachers = load_teachers_from_excel()
+                teacher_match = next((t for t in all_teachers if t["name"] == identifier), None)
+                if teacher_match:
+                    target_name = teacher_match["name"]
+                    target_section = teacher_match.get("designation", "")
 
-    if existing:
-        existing.status = status
-        existing.time = time_str
-        flash(f"{name} এর Attendance Attendance আপডেট করা হয়েছে!", "success")
-    else:
-        new_record = Attendance(
-            user_id=roll,
-            name=name,
-            role=role,
-            roll_number=roll,
-            section=section,
-            date=date_str,
-            time=time_str,
-            status=status,
-            semester=semester
-        )
-        db.add(new_record)
-        flash(f"{name} এর ম্যানুয়াল Attendance সফলভাবে যোগ হয়েছে!", "success")
+            # ডুপ্লিকেট চেক
+            exists = db.query(Attendance).filter(Attendance.name == target_name, Attendance.date == custom_date).first()
+            if exists:
+                flash(f"দুঃখিত, {target_name} এর হাজিরা আজ আগেই নেওয়া হয়েছে!", "danger")
+            else:
+                new_record = Attendance(
+                    user_id=target_roll if target_roll else target_name,
+                    name=target_name,
+                    role=db_role,
+                    roll_number=target_roll,
+                    section=target_section,
+                    date=custom_date,
+                    time=time_str,
+                    status=status,
+                    semester=target_semester
+                )
+                db.add(new_record)
+                db.commit()
+                flash(f"সফলভাবে {target_name} এর ম্যানুয়াল হাজিরা নেওয়া হয়েছে।", "success")
 
-    db.commit()
-    db.close()
-    return redirect(url_for("admin.dashboard"))
+    except Exception as e:
+        db.rollback()
+        print(f"Error: {e}")
+    finally:
+        db.close()
+
+    return redirect(url_for('admin.dashboard'))
