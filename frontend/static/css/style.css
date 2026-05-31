@@ -373,20 +373,21 @@ h3 {
     background: var(--bg-card);
     color: var(--text-primary);
     padding: 12px 16px;
-    text-align: left;
-    font-size: 13px;
-    font-weight: 700;
+    text-align: center;
+    font-size: 15px;
+    font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     border-bottom: 1px solid var(--border);
 }
 
 .attendance-table td {
-    padding: 11px 16px;
+    padding: 14px 1px;
     border-bottom: 1px solid var(--border);
-    font-size: 13px;
+    font-size: 14px;
     color: var(--text-primary);
     transition: background 0.15s;
+    text-align: center;
 }
 
 .attendance-table tr:last-child td {
@@ -395,6 +396,10 @@ h3 {
 
 .attendance-table tbody tr:hover td {
     background: var(--bg-card);
+}
+.text-left {
+    text-align: left !important;
+    padding-left: 110px !important;
 }
 
 /* Badges */
@@ -975,25 +980,7 @@ h3 {
 ========================================================= */
 
 /* ডার্ক থিমের জন্য ব্রাউজারকে নির্দেশ দেওয়া */
-:root {
-    color-scheme: dark;
-}
 
-input[type="date"] {
-    color-scheme: dark !important;
-    color: var(--text-primary) !important;
-    background: var(--bg-secondary) !important;
-    padding: 8px 12px !important;
-}
-
-/* লাইট থিমের জন্য ব্রাউজারকে নির্দেশ দেওয়া */
-:root.light-theme {
-    color-scheme: light;
-}
-
-.light-theme input[type="date"] {
-    color-scheme: light !important;
-}
 
 /* ছোট স্ক্রিনের জন্য বক্সের সাইজ ঠিক রাখা */
 @media (max-width: 768px) {
@@ -1004,4 +991,19 @@ input[type="date"] {
         text-align: left !important;
         width: 100% !important;
     }
+}
+
+.date-input {
+    width: 100%;
+    height: 44px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: 16px;
+}
+
+input[type="date"] {
+    all: revert;
 }

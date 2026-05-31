@@ -42,7 +42,7 @@
             <thead>
                 <tr>
                     <th>Roll</th>
-                    <th>নাম</th>
+                    <th class="text-left">নাম</th>
                     <th>Session</th>
                     <th>উপস্থিত</th>
                     <th>মোট ক্লাস</th>
@@ -53,7 +53,7 @@
                 {% for r in result %}
                 <tr>
                     <td>{{ r.roll }}</td>
-                    <td>{{ r.name }}</td>
+                    <td class="text-left">{{ r.name }}</td>
                     <td>{{ r.section }}</td>
                     <td>{{ r.present }}</td>
                     <td>{{ r.total }}</td>

@@ -1,13 +1,10 @@
 {% extends "base.html" %}
 {% block content %}
 <h2>Attendance Records</h2>
-
 <form method="GET" class="filter-form">
-    <input type="date" name="date_from" value="{{ date_from }}" 
-    style="background:var(--bg-primary); border:1px solid var(--border); border-radius:8px; padding:10px 12px; color:#ffffff; color-scheme: dark; width: 100%;">
-
-<input type="date" name="date_to" value="{{ date_to }}" 
-    style="background:var(--bg-primary); border:1px solid var(--border); border-radius:8px; padding:10px 12px; color:#ffffff; color-scheme: dark; width: 100%;">
+    <input type="text" name="date_from" value="{{ date_from }}" placeholder="From Date" onfocus="this.type='date'">
+    
+    <input type="text" name="date_to" value="{{ date_to }}" placeholder="To Date" onfocus="this.type='date'">
     <select name="section" id="section-filter">
         <option value="">All Session</option>
         {% for s in sections %}
@@ -39,7 +36,7 @@
                 <tr>
                     <th>তারিখ</th>
                     <th>Roll</th>
-                    <th>নাম</th>
+                    <th class="text-left">নাম</th>
                     <th>Session</th>
                     <th>সময়</th>
                     <th>Status</th>
@@ -59,7 +56,7 @@
                 <tr>
                     <td></td>
                     <td>{{ r.roll_number }}</td>
-                    <td>{{ r.name }}</td>
+                    <td class="text-left">{{ r.name }}</td>
                     <td>{{ r.section }}</td>
                     <td>{{ r.time }}</td>
                     <td>
@@ -88,8 +85,8 @@
             <thead>
                 <tr>
                     <th>তারিখ</th>
-                    <th>নাম</th>
-                    <th>পদবি (Designation)</th>
+                    <th class="text-left">নাম</th>
+                    <th class="text-left">পদবি (Designation)</th>
                     <th>সময়</th>
                     <th>Status</th>
                 </tr>
@@ -106,8 +103,8 @@
                 {% endif %}
                 <tr>
                     <td></td>
-                    <td>{{ r.name }}</td>
-                    <td><span style="color: var(--warning)">{{ r.section }}</span></td>
+                    <td class="text-left">{{ r.name }}</td>
+                    <td class="text-left"><span style="color: var(--warning)">{{ r.section }}</span></td>
                     <td>{{ r.time }}</td>
                     <td><span class="badge badge-on-time">Present</span></td>
                 </tr>

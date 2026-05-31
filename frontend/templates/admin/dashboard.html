@@ -100,7 +100,7 @@
             <thead>
                 <tr>
                     <th>Roll</th>
-                    <th>নাম</th>
+                    <th class="text-left">নাম</th>
                     <th>Session</th>
                     <th>সময়</th>
                     <th>Status</th>
@@ -112,7 +112,7 @@
                 {% set student_count.value = student_count.value + 1 %}
                 <tr>
                     <td>{{ r.roll_number or "—" }}</td>
-                    <td>{{ r.name }}</td>
+                    <td class="text-left">{{ r.name }}</td>
                     <td>{{ r.section or "—" }}</td>
                     <td>{{ r.time }}</td>
                     <td>
@@ -139,8 +139,8 @@
         <table class="attendance-table" style="margin-top: 0;">
             <thead>
                 <tr>
-                    <th>নাম</th>
-                    <th>পদবি (Designation)</th>
+                    <th class="text-left">নাম</th>
+                    <th class="text-left">পদবি (Designation)</th>
                     <th>সময়</th>
                     <th>Status</th>
                 </tr>
@@ -150,8 +150,8 @@
                 {% for r in today_records if r.role == 'teacher' %}
                 {% set teacher_count.value = teacher_count.value + 1 %}
                 <tr>
-                    <td>{{ r.name }}</td>
-                    <td><span style="color: var(--warning)">{{ r.section }}</span></td>
+                    <td class="text-left">{{ r.name }}</td>
+                    <td class="text-left"><span style="color: var(--warning)">{{ r.section }}</span></td>
                     <td>{{ r.time }}</td>
                     <td><span class="badge badge-on-time">Present</span></td>
                 </tr>
@@ -228,7 +228,7 @@
             <thead>
                 <tr>
                     <th>Roll</th>
-                    <th>নাম</th>
+                    <th class="text-left">নাম</th>
                     <th>Session</th>
                     <th>উপস্থিত</th>
                     <th>মোট</th>
@@ -239,7 +239,7 @@
                 {% for s in low_attendance %}
                 <tr>
                     <td>{{ s.roll }}</td>
-                    <td>{{ s.name }}</td>
+                    <td class="text-left">{{ s.name }}</td>
                     <td>{{ s.section }}</td>
                     <td>{{ s.present }}</td>
                     <td>{{ s.total }}</td>
