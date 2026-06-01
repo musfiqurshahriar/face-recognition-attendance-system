@@ -2,9 +2,11 @@
 {% block content %}
 <h2>Attendance Records</h2>
 <form method="GET" class="filter-form">
-    <input type="text" name="date_from" value="{{ date_from }}" placeholder="From Date" onfocus="this.type='date'">
+    <input type="text" name="date_from" placeholder="From Date" onfocus="this.type='date'; this.showPicker?.()"
+        onblur="if(!this.value) this.type='text'">
     
-    <input type="text" name="date_to" value="{{ date_to }}" placeholder="To Date" onfocus="this.type='date'">
+    <input type="text" name="date_to" placeholder="To Date" onfocus="this.type='date'; this.showPicker?.()"
+        onblur="if(!this.value) this.type='text'">
     <select name="section" id="section-filter">
         <option value="">All Session</option>
         {% for s in sections %}
