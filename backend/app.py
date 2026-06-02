@@ -217,6 +217,14 @@ def keep_alive():
     finally:
         db.close()
 
+
+from flask_login import login_required
+
+@app.route('/about')
+@login_required
+def about():
+    return render_template('about.html')
+
 if __name__ == "__main__":
     init_db()
     port = int(os.environ.get("PORT", 5000))

@@ -5,6 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Face Recognition Attendance System</title>
+    <!-- Favicon / Browser Tab Logo -->
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <script>
         const savedTheme = localStorage.getItem('theme') || 'dark';
@@ -17,7 +19,10 @@
 <body>
     {% if current_user.is_authenticated %}
     <nav class="navbar">
-        <div class="nav-brand">👤 Face Recognition Attendance System</div>
+
+        <a href="{{ url_for('about') }}" class="navbar-brand">
+            👤 Face Recognition Attendance System
+        </a>
 
         <button class="hamburger" onclick="toggleMenu()" id="hamburger">☰</button>
 
@@ -29,15 +34,17 @@
                 class="{{ 'nav-active' if request.endpoint == 'admin.attendance' else '' }}">Attendance</a>
             <a href="{{ url_for('admin.percentage') }}"
                 class="{{ 'nav-active' if request.endpoint == 'admin.percentage' else '' }}">Percentage</a>
-            <a href="{{ url_for('admin.export_excel') }}"
-                class="{{ 'nav-active' if request.endpoint == 'admin.export_excel' else '' }}">Download Attendance</a>
+            <!-- <a href="{{ url_for('admin.export_excel') }}"
+                class="{{ 'nav-active' if request.endpoint == 'admin.export_excel' else '' }}">Download Attendance</a> -->
             <a href="{{ url_for('admin.upload_students') }}"
                 class="{{ 'nav-active' if request.endpoint == 'admin.upload_students' else '' }}">Student List</a>
             <a href="{{ url_for('admin.change_password') }}"
                 class="{{ 'nav-active' if request.endpoint == 'admin.change_password' else '' }}">Change Password</a>
+
             {% elif current_user.role == 'student' %}
             <a href="{{ url_for('student.dashboard') }}"
                 class="{{ 'nav-active' if request.endpoint == 'student.dashboard' else '' }}">আমার Attendance</a>
+
             {% elif current_user.role == 'teacher' %}
             <a href="{{ url_for('teacher.dashboard') }}"
                 class="{{ 'nav-active' if request.endpoint == 'teacher.dashboard' else '' }}">আমার Dashboard</a>

@@ -1,0 +1,681 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .page-header {
+        margin-bottom: 28px;
+    }
+
+    .page-header h2 {
+        font-size: 20px;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 4px;
+    }
+
+    .page-sub {
+        color: var(--text-muted);
+        font-size: 13px;
+    }
+
+    /* HERO CARD */
+    .hero-card {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 28px;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: flex-start;
+        gap: 24px;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .hero-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: var(--accent);
+    }
+
+    .hero-avatar {
+        width: 72px;
+        height: 72px;
+        border-radius: 12px;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 30px;
+        flex-shrink: 0;
+    }
+
+    .hero-info h1 {
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 6px;
+    }
+
+    .hero-desc {
+        font-size: 13px;
+        color: var(--text-secondary);
+        line-height: 1.7;
+        margin-bottom: 14px;
+        max-width: 680px;
+    }
+
+    .badge-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .badge-accent {
+        background: rgba(79, 70, 229, 0.15);
+        color: #818cf8;
+        border: 1px solid rgba(79, 70, 229, 0.3);
+    }
+
+    .badge-success {
+        background: var(--success-bg);
+        color: var(--success);
+        border: 1px solid var(--success-border);
+    }
+
+    .badge-warning {
+        background: var(--warning-bg);
+        color: var(--warning);
+        border: 1px solid var(--warning-border);
+    }
+
+    .badge-muted {
+        background: var(--bg-card);
+        color: var(--text-muted);
+        border: 1px solid var(--border);
+    }
+
+    /* STATS OVERRIDES */
+    .stat-icon {
+        font-size: 22px;
+        margin-bottom: 10px;
+    }
+
+    .stat-card.green::before {
+        background: var(--success);
+    }
+
+    .stat-card.yellow::before {
+        background: var(--warning);
+    }
+
+    /* FEATURE GRID */
+    .feature-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: 12px;
+        margin-bottom: 8px;
+    }
+
+    .feature-card {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 18px 20px;
+        transition: border-color 0.2s, transform 0.2s;
+    }
+
+    .feature-card:hover {
+        border-color: var(--accent);
+        transform: translateY(-2px);
+    }
+
+    .feature-top {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 8px;
+    }
+
+    .feature-icon {
+        width: 34px;
+        height: 34px;
+        border-radius: 8px;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+        flex-shrink: 0;
+    }
+
+    .feature-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+
+    .feature-desc {
+        font-size: 12px;
+        color: var(--text-secondary);
+        line-height: 1.65;
+    }
+
+    /* TECH STACK */
+    .tech-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 10px;
+    }
+
+    .tech-item {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 12px 14px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        transition: border-color 0.2s;
+    }
+
+    .tech-item:hover {
+        border-color: var(--accent);
+    }
+
+    .tech-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+
+    .tech-name {
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--text-primary);
+    }
+
+    .tech-role {
+        font-size: 11px;
+        color: var(--text-muted);
+        margin-top: 1px;
+    }
+
+    /* ROLES GRID */
+    .roles-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+    }
+
+    .role-card {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 18px 20px;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .role-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+    }
+
+    .role-card.admin::before {
+        background: var(--accent);
+    }
+
+    .role-card.student::before {
+        background: var(--success);
+    }
+
+    .role-card.teacher::before {
+        background: var(--warning);
+    }
+
+    .role-icon {
+        font-size: 22px;
+        margin-bottom: 8px;
+    }
+
+    .role-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 10px;
+    }
+
+    .perm-list {
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .perm-list li {
+        font-size: 12px;
+        color: var(--text-secondary);
+        display: flex;
+        align-items: center;
+        gap: 7px;
+    }
+
+    .perm-list li::before {
+        content: '';
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: var(--success);
+        flex-shrink: 0;
+    }
+
+    /* DEVELOPER CARD */
+    .dev-card {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 24px;
+        display: flex;
+        gap: 20px;
+        align-items: flex-start;
+    }
+
+    .dev-avatar {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        flex-shrink: 0;
+    }
+
+    .dev-name {
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 3px;
+        color: var(--text-primary);
+    }
+
+    .dev-role {
+        font-size: 12px;
+        color: var(--text-secondary);
+        margin-bottom: 2px;
+    }
+
+    .dev-uni {
+        font-size: 12px;
+        color: var(--text-muted);
+        margin-bottom: 12px;
+    }
+
+    .dev-bio {
+        font-size: 13px;
+        color: var(--text-secondary);
+        line-height: 1.7;
+    }
+
+    /* LINKS */
+    .links-row {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 0;
+    }
+
+    .btn-outline {
+        background: var(--bg-card);
+        color: var(--text-secondary);
+        border: 1px solid var(--border);
+        padding: 8px 18px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 500;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        transition: all 0.2s;
+    }
+
+    .btn-outline:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+        transform: translateY(-1px);
+    }
+
+    .section-divider {
+        height: 1px;
+        background: var(--border);
+        margin: 32px 0;
+    }
+
+    @media (max-width: 768px) {
+        .hero-card {
+            flex-direction: column;
+        }
+
+        .roles-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .feature-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .tech-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+</style>
+
+<div class="page-header">
+    <h2>প্রজেক্ট পরিচিতি</h2>
+    <p class="page-sub">Face Recognition Attendance System সম্পর্কে বিস্তারিত তথ্য</p>
+</div>
+
+<div class="hero-card">
+    <div class="hero-avatar">👤</div>
+    <div class="hero-info">
+        <h1>Face Recognition Attendance System</h1>
+        <p class="hero-desc">
+            মুখমণ্ডল শনাক্তকরণ (Facial Recognition) প্রযুক্তির ওপর ভিত্তি করে তৈরি একটি অত্যাধুনিক ও স্বয়ংক্রিয় উপস্থিতি
+            ব্যবস্থাপনা সিস্টেম। এতে রয়েছে ইউজার-ফ্রেন্ডলি Flask ওয়েব ড্যাশবোর্ড, সুরক্ষিত রোল-বেসড অ্যাক্সেস, রিয়েল-টাইম অভিভাবক
+            নোটিফিকেশন এবং Google Drive ক্লাউড ব্যাকআপ সুবিধা।
+        </p>
+        <div class="badge-row">
+            <span class="badge badge-accent">🐍 Python 3.10</span>
+            <span class="badge badge-success">✅ সম্পন্ন</span>
+            <span class="badge badge-warning">🎓 Academic Project</span>
+            <span class="badge badge-muted">🏛️ PUST</span>
+        </div>
+    </div>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon">🧩</div>
+        <div class="stat-number">12+</div>
+        <div class="stat-label">মূল ফিচার</div>
+    </div>
+    <div class="stat-card green">
+        <div class="stat-icon">👥</div>
+        <div class="stat-number">3</div>
+        <div class="stat-label">ব্যবহারকারী ভূমিকা</div>
+    </div>
+    <div class="stat-card yellow">
+        <div class="stat-icon">⚙️</div>
+        <div class="stat-number">14</div>
+        <div class="stat-label">প্রযুক্তি ও লাইব্রেরি</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon">🗄️</div>
+        <div class="stat-number">SQLite</div>
+        <div class="stat-label">ডেটাবেস</div>
+    </div>
+</div>
+
+<div class="section-divider"></div>
+
+<h3>✨ মূল ফিচারসমূহ</h3>
+<div class="feature-grid">
+    <div class="feature-card">
+        <div class="feature-top">
+            <div class="feature-icon">🤖</div>
+            <div class="feature-title">স্বয়ংক্রিয় মুখ শনাক্তকরণ</div>
+        </div>
+        <div class="feature-desc">face_recognition ও dlib লাইব্রেরি ব্যবহার করে রিয়েল-টাইমে শিক্ষার্থী ও শিক্ষকদের মুখ
+            শনাক্ত করে স্বয়ংক্রিয়ভাবে উপস্থিতি রেকর্ড করে।</div>
+    </div>
+    <div class="feature-card">
+        <div class="feature-top">
+            <div class="feature-icon">⏰</div>
+            <div class="feature-title">On Time / Late স্ট্যাটাস</div>
+        </div>
+        <div class="feature-desc">ক্লাসের প্রথম প্রবেশের সময়ের উপর ভিত্তি করে স্বয়ংক্রিয়ভাবে "সময়মতো" বা "বিলম্বিত"
+            স্ট্যাটাস নির্ধারণ করা হয়।</div>
+    </div>
+    <div class="feature-card">
+        <div class="feature-top">
+            <div class="feature-icon">📊</div>
+            <div class="feature-title">ইন্টারেক্টিভ ড্যাশবোর্ড</div>
+        </div>
+        <div class="feature-desc">Chart.js দিয়ে গত ৭ দিনের উপস্থিতি ট্রেন্ড চার্ট, সারসংক্ষেপ কার্ড এবং Low Attendance
+            Alert সহ রিয়েল-টাইম পরিসংখ্যান।</div>
+    </div>
+    <div class="feature-card">
+        <div class="feature-top">
+            <div class="feature-icon">📧</div>
+            <div class="feature-title">অভিভাবক ইমেইল নোটিফিকেশন</div>
+        </div>
+        <div class="feature-desc">Brevo SMTP ব্যবহার করে শিক্ষার্থীর অনুপস্থিতিতে অভিভাবককে স্বয়ংক্রিয়ভাবে ইমেইল
+            নোটিফিকেশন পাঠানো হয়।</div>
+    </div>
+    <div class="feature-card">
+        <div class="feature-top">
+            <div class="feature-icon">♻️</div>
+            <div class="feature-title">Google Drive ব্যাকআপ</div>
+        </div>
+        <div class="feature-desc">OAuth2 ব্যবহার করে প্রতি রাতে scheduler-এর মাধ্যমে স্বয়ংক্রিয় ডেটাবেস ব্যাকআপ Google
+            Drive-এ আপলোড হয়।</div>
+    </div>
+    <div class="feature-card">
+        <div class="feature-top">
+            <div class="feature-icon">📥</div>
+            <div class="feature-title">Excel রিপোর্ট এক্সপোর্ট</div>
+        </div>
+        <div class="feature-desc">openpyxl দিয়ে স্টাইলড Excel রিপোর্ট তৈরি — রঙিন তারিখ-বিভাজক সহ পরিষ্কার ও পেশাদার
+            ফরম্যাটে।</div>
+    </div>
+    <div class="feature-card">
+        <div class="feature-top">
+            <div class="feature-icon">✍️</div>
+            <div class="feature-title">Manual Attendance Entry</div>
+        </div>
+        <div class="feature-desc">ক্যামেরায় সমস্যার ক্ষেত্রে অ্যাডমিন ম্যানুয়ালি একজন বা সবার উপস্থিতি একসাথে দিতে
+            পারবেন।</div>
+    </div>
+    <div class="feature-card">
+        <div class="feature-top">
+            <div class="feature-icon">🔑</div>
+            <div class="feature-title">ইমেইল-ভিত্তিক পাসওয়ার্ড রিসেট</div>
+        </div>
+        <div class="feature-desc">itsdangerous লাইব্রেরি ব্যবহার করে নিরাপদ টোকেন-ভিত্তিক পাসওয়ার্ড রিসেট সুবিধা।</div>
+    </div>
+</div>
+
+<div class="section-divider"></div>
+
+<h3>👥 ব্যবহারকারী ভূমিকা</h3>
+<div class="roles-grid">
+    <div class="role-card admin">
+        <div class="role-icon">🛡️</div>
+        <div class="role-title">অ্যাডমিন</div>
+        <ul class="perm-list">
+            <li>শিক্ষার্থী ও শিক্ষক ব্যবস্থাপনা</li>
+            <li>মুখের ছবি নিবন্ধন</li>
+            <li>সব উপস্থিতি দেখা ও সম্পাদনা</li>
+            <li>Manual attendance entry</li>
+            <li>Excel রিপোর্ট এক্সপোর্ট</li>
+            <li>Google Drive ব্যাকআপ নিয়ন্ত্রণ</li>
+            <li>ইমেইল নোটিফিকেশন পাঠানো</li>
+        </ul>
+    </div>
+    <div class="role-card student">
+        <div class="role-icon">📚</div>
+        <div class="role-title">শিক্ষার্থী</div>
+        <ul class="perm-list">
+            <li>নিজের উপস্থিতি দেখা</li>
+            <li>সেশন-ভিত্তিক ইতিহাস</li>
+            <li>উপস্থিতির পরিসংখ্যান</li>
+            <li>প্রোফাইল তথ্য দেখা</li>
+        </ul>
+    </div>
+    <div class="role-card teacher">
+        <div class="role-icon">👨‍🏫</div>
+        <div class="role-title">শিক্ষক</div>
+        <ul class="perm-list">
+            <li>নিজের উপস্থিতি দেখা</li>
+            <li>শিক্ষার্থীর উপস্থিতি দেখা</li>
+            <li>রিপোর্ট ডাউনলোড</li>
+            <li>প্রোফাইল তথ্য দেখা</li>
+        </ul>
+    </div>
+</div>
+
+<div class="section-divider"></div>
+
+<h3>⚙️ টেক স্ট্যাক</h3>
+<div class="tech-grid">
+    <div class="tech-item">
+        <div class="tech-dot" style="background:#3776ab"></div>
+        <div>
+            <div class="tech-name">Python 3.10</div>
+            <div class="tech-role">Core Language</div>
+        </div>
+    </div>
+    <div class="tech-item">
+        <div class="tech-dot" style="background:#e74c3c"></div>
+        <div>
+            <div class="tech-name">Flask</div>
+            <div class="tech-role">Web Framework</div>
+        </div>
+    </div>
+    <div class="tech-item">
+        <div class="tech-dot" style="background:#818cf8"></div>
+        <div>
+            <div class="tech-name">face_recognition</div>
+            <div class="tech-role">Face Detection</div>
+        </div>
+    </div>
+    <div class="tech-item">
+        <div class="tech-dot" style="background:#a78bfa"></div>
+        <div>
+            <div class="tech-name">dlib 20.0.1</div>
+            <div class="tech-role">ML Library</div>
+        </div>
+    </div>
+    <div class="tech-item">
+        <div class="tech-dot" style="background:#34d399"></div>
+        <div>
+            <div class="tech-name">OpenCV</div>
+            <div class="tech-role">Image Processing</div>
+        </div>
+    </div>
+    <div class="tech-item">
+        <div class="tech-dot" style="background:#fbbf24"></div>
+        <div>
+            <div class="tech-name">SQLAlchemy</div>
+            <div class="tech-role">ORM / SQLite</div>
+        </div>
+    </div>
+    <div class="tech-item">
+        <div class="tech-dot" style="background:#6ee7b7"></div>
+        <div>
+            <div class="tech-name">pandas</div>
+            <div class="tech-role">Data Processing</div>
+        </div>
+    </div>
+    <div class="tech-item">
+        <div class="tech-dot" style="background:#f0a500"></div>
+        <div>
+            <div class="tech-name">openpyxl</div>
+            <div class="tech-role">Excel Export</div>
+        </div>
+    </div>
+    <div class="tech-item">
+        <div class="tech-dot" style="background:#ff6b35"></div>
+        <div>
+            <div class="tech-name">Chart.js</div>
+            <div class="tech-role">Data Visualization</div>
+        </div>
+    </div>
+    <div class="tech-item">
+        <div class="tech-dot" style="background:#f87171"></div>
+        <div>
+            <div class="tech-name">Pillow</div>
+            <div class="tech-role">Image Loading</div>
+        </div>
+    </div>
+    <div class="tech-item">
+        <div class="tech-dot" style="background:#1b9ae4"></div>
+        <div>
+            <div class="tech-name">Brevo SMTP</div>
+            <div class="tech-role">Email Service</div>
+        </div>
+    </div>
+    <div class="tech-item">
+        <div class="tech-dot" style="background:#4285f4"></div>
+        <div>
+            <div class="tech-name">Google Drive API</div>
+            <div class="tech-role">Cloud Backup</div>
+        </div>
+    </div>
+</div>
+
+<div class="section-divider"></div>
+
+<h3>👤 ডেভেলপার পরিচিতি</h3>
+<div class="dev-card">
+    <div class="dev-avatar">👨‍💻</div>
+    <div>
+        <div class="dev-name">Musfiqur Shahriar</div>
+        <div class="dev-role">B.Sc. Student — Electrical, Electronic and Communication Engineering (EECE)</div>
+        <div class="dev-uni">Pabna University of Science and Technology (PUST)</div>
+        <div class="dev-bio">
+            ❝ আমি পাবনা বিজ্ঞান ও প্রযুক্তি বিশ্ববিদ্যালয়ের <b>EECE</b> বিভাগের একজন শিক্ষার্থী হিসেবে <b>Practical</b> ও <b>Real-World</b>
+            সমস্যা সমাধানে আগ্রহ থেকে এই প্রোজেক্টটি নিয়ে কাজ করেছি।
+            এটি একটি একাডেমিক উদ্যোগ যেখানে <b>Computer Vision, Web Development</b> এবং <b>Database Management</b> একসাথে ব্যবহার করে একটি সম্পূর্ণ স্বয়ংক্রিয় ও যুগোপযোগী সিস্টেম ডেভেলপ করা হয়েছে। এর মূল লক্ষ্য হলো প্রথাগত খাতা-কলমের উপস্থিতি গ্রহণ
+            প্রক্রিয়াকে ডিজিটাল এবং সময়সাশ্রয়ী করা। ❞
+            
+        </div>
+    </div>
+</div>
+
+<div class="section-divider"></div>
+
+<h3>🔗 লিংকসমূহ</h3>
+<div class="links-row">
+    <a href="https://github.com/MusfiqurShahriar/Face-Recognition-Attendance-System" class="btn-primary"
+        target="_blank">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+            <path
+                d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z" />
+        </svg>
+        GitHub Repository
+    </a>
+    <a href="https://github.com/MusfiqurShahriar" class="btn-outline" target="_blank">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+            <path
+                d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z" />
+        </svg>
+        GitHub Profile
+    </a>
+    <a href="https://www.linkedin.com/in/musfiqurshahriar" class="btn-outline" target="_blank">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+            <path
+                d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+        </svg>
+        LinkedIn Profile
+    </a>
+</div>
+
+{% endblock %}

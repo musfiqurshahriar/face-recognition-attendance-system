@@ -259,6 +259,49 @@ body {
     opacity: 0.85;
 }
 
+/* =========================================================
+   Navbar Links Hover Animation
+========================================================= */
+/* নেভবারের সব লিংকের ট্রানজিশন স্মুথ করা */
+.nav-links a {
+    text-decoration: none !important;
+    transition: all 0.3s ease !important;
+    /* অ্যানিমেশনটি স্মুথ করার জন্য */
+    display: inline-block !important;
+    /* স্কেল (scale) অ্যানিমেশনটি কার্যকর করার জন্য */
+}
+
+/* মাউস নিলে (Hover) প্রতিটি অপশন হালকা পপ-আপ হবে এবং অ্যাকসেন্ট কালার পাবে */
+.nav-links a:hover {
+    color: var(--accent) !important;
+    /* হোভার করলে থিমের মেইন কালার হবে */
+    transform: scale(1.05) !important;
+    /* লেখাটি ৫% বড় হয়ে ভেসে উঠবে */
+}
+
+/* =========================================================
+   Navbar Brand (Logo/Text) Link Fix & Animation
+========================================================= */
+.navbar-brand {
+    text-decoration: none !important;
+    /* লিংকের নিচের আন্ডারলাইন মুছে ফেলবে */
+    color: var(--text-primary) !important;
+    /* আগের মতো স্বাভাবিক টেক্সট কালার দেবে */
+    transition: all 0.3s ease;
+    /* হোভার অ্যানিমেশনটি স্মুথ করার জন্য */
+    display: inline-block;
+    /* ট্রান্সফর্ম ঠিকমতো কাজ করার জন্য */
+    font-weight: bold;
+}
+
+/* মাউস নিলে (Hover) যা হবে */
+.navbar-brand:hover {
+    color: var(--accent) !important;
+    /* মাউস নিলে আপনার থিমের অ্যাকসেন্ট কালার হবে */
+    transform: scale(1.05);
+    /* লেখাটা হালকা একটু পপ-আপ বা বড় হবে */
+}
+
 /* Container */
 .container {
     max-width: 1200px;
