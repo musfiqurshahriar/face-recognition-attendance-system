@@ -160,7 +160,7 @@
 
 
         <button type="submit" class="btn-primary"
-            style="background-color: var(--accent); border: 1px solid var(--accent); padding: 7px 15px; border-radius: 8px; color: white; cursor: pointer; width: 280px; font-weight: bold; transition: all 0.2s;">
+            style="background-color: var(--accent); border: 1px solid var(--accent); padding: 7px 15px; border-radius: 8px; color: white; cursor: pointer; width: 280px; transition: all 0.2s;">
 
             Update Record
 
@@ -205,6 +205,39 @@
     }
 
 </script>
+
+
+<!-- Delete Attendance Section -->
+<div class="notification-box"
+    style="margin-top: 20px; border-left: 4px solid #dc3545; background-color: var(--bg-card); padding: 20px; border-radius: 8px;">
+    <div>
+        <h3 style="color: #dc3545;">🗑️ Delete Attendance Record</h3>
+        <p>নির্দিষ্ট কোনো দিনের সম্পূর্ণ বা আংশিক হাজিরার রেকর্ড ডাটাবেজ থেকে মুছে ফেলুন</p>
+    </div>
+    <form method="POST" action="{{ url_for('admin.delete_attendance') }}"
+        onsubmit="return confirm('আপনি কি নিশ্চিত যে এই রেকর্ডগুলো চিরতরে মুছে ফেলতে চান? এটি আর ফেরত আনা যাবে না!');"
+        style="display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-top: 10px;">
+
+        <!-- তারিখ ইনপুট (নাম ঠিক রাখা হয়েছে) -->
+        <input type="date" name="delete_date" value="{{ today }}" required
+            style="background:var(--bg-primary); border:1px solid var(--border); border-radius:8px; padding:7px 12px; color:var(--text-primary); width: 280px; outline: none;">
+
+        <!-- ড্রপডাউন (All অপশন সহ) -->
+        <select name="delete_scope" required
+            style="background:var(--bg-primary); border:1px solid var(--border); border-radius:8px; padding:7px 12px; color:var(--text-primary); width: 280px; outline: none; cursor: pointer;">
+            <option value="all">💥 All Records</option>
+            <option value="student">👨‍🎓 Students Only</option>
+            <option value="teacher">🧑‍🏫 Teachers Only</option>
+        </select>
+
+        <!-- ডিলিট বাটন (লাল রঙে) -->
+        <button type="submit" class="btn-danger"
+            style="background-color: #dc3545; border: 1px solid #dc3545; padding: 7px 15px; border-radius: 8px; color: white; cursor: pointer; width: 280px; transition: background 0.2s;">
+            Delete Records
+        </button>
+    </form>
+</div>
+
 
 <div class="chart-box">
     <h3>একনজরে শেষ ৭ দিনের Attendance Trend</h3>

@@ -718,3 +718,43 @@ def update_attendance():
         flash("অনুগ্রহ করে তারিখ, ব্যক্তি এবং নতুন স্ট্যাটাস নির্বাচন করুন।", "danger")
         
     return redirect(url_for('admin.dashboard'))
+
+
+@admin_bp.route('/delete_attendance', methods=['POST'])
+# @login_required 
+def delete_attendance():
+    date_to_delete = request.form.get('delete_date')
+    delete_scope = request.form.get('delete_scope') # 'all', 'student', 'teacher' আসবে
+    
+    if date_to_delete:
+        session = SessionLocal() 
+        try:
+            # প্রথমে ওই তারিখের কুয়েরি তৈরি করা হলো
+            query = session.query(Attendance).filter_by(date=date_to_delete)
+            
+            # ড্রপডাউনের ভ্যালু অনুযায়ী ফিল্টার করা
+            if delete_scope == 'student':
+                records_to_delete = query.filter_by(role='student').all()
+            elif delete_scope == 'teacher':
+                records_to_delete = query.filter_by(role='teacher').all()
+            else:
+                records_to_delete = query.all() # 'all' হলে ওই দিনের সবকিছু
+            
+            if records_to_delete:
+                for record in records_to_delete:
+                    session.delete(record)
+                session.commit()
+                flash(f"{date_to_delete} তারিখের সিলেক্টেড রেকর্ড সফলভাবে মুছে ফেলা হয়েছে!", "success")
+            else:
+                flash(f"{date_to_delete} তারিখে কোনো হাজিরার রেকর্ড পাওয়া যায়নি।", "warning")
+                
+        except Exception as e:
+            session.rollback()
+            flash("রেকর্ড muche ফেলতে গিয়ে একটি সমস্যা হয়েছে।", "danger")
+            print(f"[ERROR] {e}")
+        finally:
+            session.close()
+    else:
+        flash("অনুগ্রহ করে একটি তারিখ নির্বাচন করুন।", "danger")
+        
+    return redirect(url_for('admin.dashboard'))
