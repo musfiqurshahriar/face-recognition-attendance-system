@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, request, send_file, redirect, url_
 from flask_login import login_required, current_user
 from database import SessionLocal, Attendance, load_students_from_excel, load_teachers_from_excel, get_admin_from_env
 from sqlalchemy import func  # অপ্টিমাইজেশনের জন্য func ইমপোর্ট করা হলো
+from datetime import datetime # (এই লাইনটি ফাইলের একদম ওপরে ইম্পোর্ট করা না থাকলে দিয়ে দেবেন)
 import pandas as pd
 import io
 import os
@@ -673,4 +674,47 @@ def manual_attendance():
     finally:
         db.close()
 
+    return redirect(url_for('admin.dashboard'))
+
+
+@admin_bp.route('/update_attendance', methods=['POST'])
+# @login_required 
+def update_attendance():
+    date_to_update = request.form.get('update_date')
+    role_type = request.form.get('role')           
+    identifier = request.form.get('student_roll')  
+    new_status = request.form.get('new_status')
+    
+    if date_to_update and identifier and new_status:
+        session = SessionLocal() 
+        try:
+            if role_type == 'student':
+                record = session.query(Attendance).filter_by(date=date_to_update, roll_number=identifier).first()
+            else:
+                record = session.query(Attendance).filter_by(date=date_to_update, name=identifier).first()
+            
+            if record:
+                # 🌟 আসল ম্যাজিক লজিক 🌟
+                if new_status == 'Absent':
+                    # যদি absent করা হয়, তবে রেকর্ডটি ডেটাবেজ থেকে মুছে ফেলবে
+                    session.delete(record)
+                    session.commit()
+                    flash(f"রেকর্ড মুছে ফেলা হয়েছে! এখন তাকে Absent লিস্টে দেখাবে।", "success")
+                else:
+                    # যদি Late বা On Time করা হয়, তবে শুধু স্ট্যাটাস আপডেট করবে
+                    record.status = new_status
+                    session.commit()
+                    flash(f"হাজিরা সফলভাবে '{new_status}' করা হয়েছে!", "success")
+            else:
+                flash(f"{date_to_update} তারিখে এই ব্যক্তির কোনো হাজিরার রেকর্ড পাওয়া যায়নি।", "warning")
+                
+        except Exception as e:
+            session.rollback()
+            flash("স্ট্যাটাস আপডেট করতে গিয়ে একটি সমস্যা হয়েছে।", "danger")
+            print(f"[ERROR] {e}") 
+        finally:
+            session.close() 
+    else:
+        flash("অনুগ্রহ করে তারিখ, ব্যক্তি এবং নতুন স্ট্যাটাস নির্বাচন করুন।", "danger")
+        
     return redirect(url_for('admin.dashboard'))
