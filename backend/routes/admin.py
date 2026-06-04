@@ -1,16 +1,18 @@
 from flask import Blueprint, render_template, request, send_file, redirect, url_for, flash
 from flask_login import login_required, current_user
 from database import SessionLocal, Attendance, load_students_from_excel, load_teachers_from_excel, get_admin_from_env
-from sqlalchemy import func  # অপ্টিমাইজেশনের জন্য func ইমপোর্ট করা হলো
-from datetime import datetime # (এই লাইনটি ফাইলের একদম ওপরে ইম্পোর্ট করা না থাকলে দিয়ে দেবেন)
+from sqlalchemy import func
+from datetime import datetime
 import pandas as pd
 import io
 import os
 import time
+
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
+
 _DASHBOARD_CACHE = {}
 _DASHBOARD_CACHE_TIME = 0
-CACHE_TTL = 60 
+CACHE_TTL = 60
 
 def admin_required(f):
     from functools import wraps
@@ -21,7 +23,6 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated
 
-# পদবি অনুযায়ী সাজানোর জন্য র‍্যাংকিং (ছোট সংখ্যা আগে দেখাবে)
 DESIGNATION_RANK = {
     "Professor": 1,
     "Associate Professor": 2,
@@ -32,8 +33,10 @@ DESIGNATION_RANK = {
 def get_teacher_rank(designation):
     return DESIGNATION_RANK.get(designation, 99)
 
-
-
+def clear_dashboard_cache():
+    global _DASHBOARD_CACHE, _DASHBOARD_CACHE_TIME
+    _DASHBOARD_CACHE = {}
+    _DASHBOARD_CACHE_TIME = 0
 
 @admin_bp.route("/dashboard")
 @login_required
@@ -42,9 +45,8 @@ def dashboard():
     global _DASHBOARD_CACHE, _DASHBOARD_CACHE_TIME
 
     today = __import__("datetime").date.today().strftime("%Y-%m-%d")
-
-    # Cache check — ৬০ সেকেন্ডের মধ্যে একই দিনের data থাকলে সরাসরি return
     now = time.time()
+
     if _DASHBOARD_CACHE and (now - _DASHBOARD_CACHE_TIME) < CACHE_TTL and _DASHBOARD_CACHE.get("today") == today:
         return render_template("admin/dashboard.html", **_DASHBOARD_CACHE)
 
@@ -127,12 +129,12 @@ def dashboard():
                         "total": total_days
                     })
 
-        from datetime import datetime, timedelta
+        from datetime import datetime as dt, timedelta
         chart_labels = []
         chart_present = []
         chart_absent = []
 
-        start_date = (datetime.today() - timedelta(days=6)).strftime("%Y-%m-%d")
+        start_date = (dt.today() - timedelta(days=6)).strftime("%Y-%m-%d")
 
         chart_results = db.query(Attendance.date, func.count(Attendance.roll_number.distinct()))\
             .filter(Attendance.date >= start_date, Attendance.role == "student")\
@@ -141,36 +143,39 @@ def dashboard():
         chart_counts = {row[0]: row[1] for row in chart_results}
 
         for i in range(6, -1, -1):
-            day = (datetime.today() - timedelta(days=i)).strftime("%Y-%m-%d")
-            day_label = (datetime.today() - timedelta(days=i)).strftime("%d %b")
+            day = (dt.today() - timedelta(days=i)).strftime("%Y-%m-%d")
+            day_label = (dt.today() - timedelta(days=i)).strftime("%d %b")
             present = chart_counts.get(day, 0)
             chart_labels.append(day_label)
             chart_present.append(present)
             chart_absent.append(total_students - present)
 
+        context = dict(
+            today_records=today_records,
+            total_students=total_students,
+            today_present=today_present,
+            today_absent=today_absent,
+            sections=sections,
+            today=today,
+            absent_students=absent_students,
+            absent_teachers=absent_teachers,
+            low_attendance=low_attendance,
+            chart_labels=chart_labels,
+            chart_present=chart_present,
+            chart_absent=chart_absent,
+            all_registered_students=students_list,
+            all_registered_teachers=teachers_list
+        )
+
+        _DASHBOARD_CACHE.clear()
+        _DASHBOARD_CACHE.update(context)
+        _DASHBOARD_CACHE_TIME = now
+
     finally:
         db.close()
 
-    # Cache এ save করো
-    _DASHBOARD_CACHE = dict(
-        today_records=today_records,
-        total_students=total_students,
-        today_present=today_present,
-        today_absent=today_absent,
-        sections=sections,
-        today=today,
-        absent_students=absent_students,
-        absent_teachers=absent_teachers,
-        low_attendance=low_attendance,
-        chart_labels=chart_labels,
-        chart_present=chart_present,
-        chart_absent=chart_absent,
-        all_registered_students=students_list,
-        all_registered_teachers=teachers_list
-    )
-    _DASHBOARD_CACHE_TIME = now
-
     return render_template("admin/dashboard.html", **_DASHBOARD_CACHE)
+
 
 @admin_bp.route("/attendance")
 @login_required
@@ -201,7 +206,7 @@ def attendance():
         Attendance.section.desc(),
         Attendance.roll_number
     ).all()
-    
+
     all_teacher_records = t_query.all()
     teacher_records = sorted(
         all_teacher_records,
@@ -216,7 +221,7 @@ def attendance():
     db.close()
     return render_template("admin/attendance.html",
         student_records=student_records,
-        teacher_records=teacher_records, 
+        teacher_records=teacher_records,
         sections=sections,
         semesters=semesters,
         date_from=date_from,
@@ -224,6 +229,7 @@ def attendance():
         selected_section=section,
         selected_semester=semester
     )
+
 
 @admin_bp.route("/percentage")
 @login_required
@@ -286,6 +292,7 @@ def percentage():
         selected_semester=semester
     )
 
+
 @admin_bp.route("/export/excel")
 @login_required
 @admin_required
@@ -298,13 +305,13 @@ def export_excel():
     semester = request.args.get("semester", "")
     date_from = request.args.get("date_from", "")
     date_to = request.args.get("date_to", "")
-    export_type = request.args.get("type", "student") 
+    export_type = request.args.get("type", "student")
 
     output = io.BytesIO()
-    
+
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
         wb = writer.book
-        
+
         if export_type == "student" or export_type == "all":
             s_query = db.query(Attendance).filter(Attendance.role == "student")
             if section:
@@ -321,7 +328,7 @@ def export_excel():
                 Attendance.section.desc(),
                 Attendance.roll_number
             ).all()
-            
+
             ws = wb.create_sheet("Students")
             headers = ["Date", "Roll", "Name", "Session", "Time", "Status", "Semester"]
             ws.append(headers)
@@ -363,13 +370,13 @@ def export_excel():
                 t_query = t_query.filter(Attendance.date >= date_from)
             if date_to:
                 t_query = t_query.filter(Attendance.date <= date_to)
-                
+
             all_t_records = t_query.all()
             t_records = sorted(
                 all_t_records,
                 key=lambda x: (x.date, get_teacher_rank(x.section))
             )
-            
+
             t_ws = wb.create_sheet("Teachers")
             t_headers = ["Date", "Name", "Designation", "Time", "Status"]
             t_ws.append(t_headers)
@@ -402,21 +409,22 @@ def export_excel():
 
             for col in range(1, len(t_headers) + 1):
                 t_ws.column_dimensions[get_column_letter(col)].width = 20
-                
+
         if "Sheet" in wb.sheetnames:
             wb.remove(wb["Sheet"])
 
     db.close()
     output.seek(0)
-    
+
     filename = f"{export_type}_attendance.xlsx" if export_type != "all" else "full_attendance_report.xlsx"
-    
+
     return send_file(
         output,
         download_name=filename,
         as_attachment=True,
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
+
 
 @admin_bp.route("/send-notifications", methods=["POST"])
 @login_required
@@ -436,6 +444,7 @@ def send_notifications():
     )
     return redirect(url_for("admin.dashboard"))
 
+
 @admin_bp.route("/upload-students", methods=["GET", "POST"])
 @login_required
 @admin_required
@@ -454,6 +463,7 @@ def upload_students():
             flash("শুধু .xlsx ফাইল upload করুন!", "error")
 
     return render_template("admin/upload_students.html")
+
 
 @admin_bp.route("/change-password", methods=["GET", "POST"])
 @login_required
@@ -500,6 +510,7 @@ def change_password():
         return redirect(url_for("admin.dashboard"))
 
     return render_template("admin/change_password.html")
+
 
 @admin_bp.route("/export/percentage")
 @login_required
@@ -586,15 +597,11 @@ def export_percentage():
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
+
 @admin_bp.route("/manual-attendance", methods=["POST"])
 @login_required
 @admin_required
 def manual_attendance():
-    global _DASHBOARD_CACHE  # ← একদম শুরুতে
-    from database import SessionLocal, Attendance, load_students_from_excel, load_teachers_from_excel
-    from flask import request, flash, redirect, url_for
-    from datetime import datetime
-
     role = request.form.get("role")
     identifier = request.form.get("identifier", "").strip()
     status = request.form.get("status", "On Time")
@@ -602,7 +609,7 @@ def manual_attendance():
 
     if not custom_date:
         custom_date = datetime.now().strftime("%Y-%m-%d")
-    
+
     time_str = datetime.now().strftime("%I:%M %p")
     db = SessionLocal()
 
@@ -611,7 +618,10 @@ def manual_attendance():
             all_students = load_students_from_excel()
             count = 0
             for student in all_students:
-                exists = db.query(Attendance).filter(Attendance.name == student["name"], Attendance.date == custom_date).first()
+                exists = db.query(Attendance).filter(
+                    Attendance.name == student["name"],
+                    Attendance.date == custom_date
+                ).first()
                 if not exists:
                     new_record = Attendance(
                         user_id=student.get("roll", student["name"]),
@@ -627,9 +637,9 @@ def manual_attendance():
                     db.add(new_record)
                     count += 1
             db.commit()
-            _DASHBOARD_CACHE = {}
+            clear_dashboard_cache()
             flash(f"সফলভাবে মোট {count} জন শিক্ষার্থীর বাল্ক হাজিরা নেওয়া হয়েছে।", "success")
-        
+
         else:
             target_name = identifier
             target_roll = ""
@@ -639,7 +649,9 @@ def manual_attendance():
 
             if role == "student":
                 all_students = load_students_from_excel()
-                student_match = next((s for s in all_students if str(s.get("roll")) == identifier), None)
+                student_match = next(
+                    (s for s in all_students if str(s.get("roll")) == identifier), None
+                )
                 if student_match:
                     target_name = student_match["name"]
                     target_roll = student_match.get("roll", "")
@@ -647,12 +659,18 @@ def manual_attendance():
                     target_semester = student_match.get("semester", "")
             else:
                 all_teachers = load_teachers_from_excel()
-                teacher_match = next((t for t in all_teachers if t["name"] == identifier), None)
+                teacher_match = next(
+                    (t for t in all_teachers if t["name"] == identifier), None
+                )
                 if teacher_match:
                     target_name = teacher_match["name"]
                     target_section = teacher_match.get("designation", "")
 
-            exists = db.query(Attendance).filter(Attendance.name == target_name, Attendance.date == custom_date).first()
+            exists = db.query(Attendance).filter(
+                Attendance.name == target_name,
+                Attendance.date == custom_date
+            ).first()
+
             if exists:
                 flash(f"দুঃখিত, {target_name} এর হাজিরা আজ আগেই নেওয়া হয়েছে!", "danger")
             else:
@@ -669,7 +687,7 @@ def manual_attendance():
                 )
                 db.add(new_record)
                 db.commit()
-                _DASHBOARD_CACHE = {}
+                clear_dashboard_cache()
                 flash(f"সফলভাবে {target_name} এর ম্যানুয়াল হাজিরা নেওয়া হয়েছে।", "success")
 
     except Exception as e:
@@ -680,84 +698,81 @@ def manual_attendance():
 
     return redirect(url_for('admin.dashboard'))
 
+
 @admin_bp.route('/update_attendance', methods=['POST'])
-# @login_required 
 def update_attendance():
     date_to_update = request.form.get('update_date')
-    role_type = request.form.get('role')           
-    identifier = request.form.get('student_roll')  
+    role_type = request.form.get('role')
+    identifier = request.form.get('student_roll')
     new_status = request.form.get('new_status')
-    
+
     if date_to_update and identifier and new_status:
-        session = SessionLocal() 
+        session = SessionLocal()
         try:
             if role_type == 'student':
                 record = session.query(Attendance).filter_by(date=date_to_update, roll_number=identifier).first()
             else:
                 record = session.query(Attendance).filter_by(date=date_to_update, name=identifier).first()
-            
+
             if record:
-                # 🌟 আসল ম্যাজিক লজিক 🌟
                 if new_status == 'Absent':
-                    # যদি absent করা হয়, তবে রেকর্ডটি ডেটাবেজ থেকে মুছে ফেলবে
                     session.delete(record)
                     session.commit()
+                    clear_dashboard_cache()
                     flash(f"রেকর্ড মুছে ফেলা হয়েছে! এখন তাকে Absent লিস্টে দেখাবে।", "success")
                 else:
-                    # যদি Late বা On Time করা হয়, তবে শুধু স্ট্যাটাস আপডেট করবে
                     record.status = new_status
                     session.commit()
+                    clear_dashboard_cache()
                     flash(f"হাজিরা সফলভাবে '{new_status}' করা হয়েছে!", "success")
             else:
                 flash(f"{date_to_update} তারিখে এই ব্যক্তির কোনো হাজিরার রেকর্ড পাওয়া যায়নি।", "warning")
-                
+
         except Exception as e:
             session.rollback()
             flash("স্ট্যাটাস আপডেট করতে গিয়ে একটি সমস্যা হয়েছে।", "danger")
-            print(f"[ERROR] {e}") 
+            print(f"[ERROR] {e}")
         finally:
-            session.close() 
+            session.close()
     else:
         flash("অনুগ্রহ করে তারিখ, ব্যক্তি এবং নতুন স্ট্যাটাস নির্বাচন করুন।", "danger")
-        
+
     return redirect(url_for('admin.dashboard'))
 
 
 @admin_bp.route('/delete_attendance', methods=['POST'])
-# @login_required 
 def delete_attendance():
     date_to_delete = request.form.get('delete_date')
-    delete_scope = request.form.get('delete_scope') # 'all', 'student', 'teacher' আসবে
-    
+    delete_scope = request.form.get('delete_scope')
+
     if date_to_delete:
-        session = SessionLocal() 
+        session = SessionLocal()
         try:
-            # প্রথমে ওই তারিখের কুয়েরি তৈরি করা হলো
             query = session.query(Attendance).filter_by(date=date_to_delete)
-            
-            # ড্রপডাউনের ভ্যালু অনুযায়ী ফিল্টার করা
+
             if delete_scope == 'student':
                 records_to_delete = query.filter_by(role='student').all()
             elif delete_scope == 'teacher':
                 records_to_delete = query.filter_by(role='teacher').all()
             else:
-                records_to_delete = query.all() # 'all' হলে ওই দিনের সবকিছু
-            
+                records_to_delete = query.all()
+
             if records_to_delete:
                 for record in records_to_delete:
                     session.delete(record)
                 session.commit()
+                clear_dashboard_cache()
                 flash(f"{date_to_delete} তারিখের সিলেক্টেড রেকর্ড সফলভাবে মুছে ফেলা হয়েছে!", "success")
             else:
                 flash(f"{date_to_delete} তারিখে কোনো হাজিরার রেকর্ড পাওয়া যায়নি।", "warning")
-                
+
         except Exception as e:
             session.rollback()
-            flash("রেকর্ড muche ফেলতে গিয়ে একটি সমস্যা হয়েছে।", "danger")
+            flash("রেকর্ড মুছে ফেলতে গিয়ে একটি সমস্যা হয়েছে।", "danger")
             print(f"[ERROR] {e}")
         finally:
             session.close()
     else:
         flash("অনুগ্রহ করে একটি তারিখ নির্বাচন করুন।", "danger")
-        
+
     return redirect(url_for('admin.dashboard'))
