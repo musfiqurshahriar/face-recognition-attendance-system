@@ -606,12 +606,10 @@ def manual_attendance():
     db = SessionLocal()
 
     try:
-        # ১. "All" সিলেক্ট করলে সব স্টুডেন্টের হাজিরা
         if role == "student" and identifier.lower() == "all":
             all_students = load_students_from_excel()
             count = 0
             for student in all_students:
-                # আগে চেক করবে এই ডেটে হাজিরা আছে কি না
                 exists = db.query(Attendance).filter(Attendance.name == student["name"], Attendance.date == custom_date).first()
                 if not exists:
                     new_record = Attendance(
@@ -628,9 +626,10 @@ def manual_attendance():
                     db.add(new_record)
                     count += 1
             db.commit()
+            global _DASHBOARD_CACHE
+            _DASHBOARD_CACHE = {}
             flash(f"সফলভাবে মোট {count} জন শিক্ষার্থীর বাল্ক হাজিরা নেওয়া হয়েছে।", "success")
         
-        # ২. সিঙ্গেল স্টুডেন্ট বা টিচারের হাজিরা
         else:
             target_name = identifier
             target_roll = ""
@@ -653,7 +652,6 @@ def manual_attendance():
                     target_name = teacher_match["name"]
                     target_section = teacher_match.get("designation", "")
 
-            # ডুপ্লিকেট চেক
             exists = db.query(Attendance).filter(Attendance.name == target_name, Attendance.date == custom_date).first()
             if exists:
                 flash(f"দুঃখিত, {target_name} এর হাজিরা আজ আগেই নেওয়া হয়েছে!", "danger")
@@ -671,6 +669,8 @@ def manual_attendance():
                 )
                 db.add(new_record)
                 db.commit()
+                global _DASHBOARD_CACHE
+                _DASHBOARD_CACHE = {}
                 flash(f"সফলভাবে {target_name} এর ম্যানুয়াল হাজিরা নেওয়া হয়েছে।", "success")
 
     except Exception as e:
@@ -680,7 +680,6 @@ def manual_attendance():
         db.close()
 
     return redirect(url_for('admin.dashboard'))
-
 
 @admin_bp.route('/update_attendance', methods=['POST'])
 # @login_required 

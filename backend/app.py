@@ -14,7 +14,8 @@ app = Flask(
     static_folder="../frontend/static"
 )
 app.secret_key = "face_attendance_secret_key_2024"
-
+from datetime import timedelta
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = timedelta(days=7)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "auth.login"
