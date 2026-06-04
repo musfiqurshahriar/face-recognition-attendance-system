@@ -6,7 +6,11 @@ from datetime import datetime # (এই লাইনটি ফাইলের �
 import pandas as pd
 import io
 import os
+import time
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
+_DASHBOARD_CACHE = {}
+_DASHBOARD_CACHE_TIME = 0
+CACHE_TTL = 60 
 
 def admin_required(f):
     from functools import wraps
@@ -28,129 +32,127 @@ DESIGNATION_RANK = {
 def get_teacher_rank(designation):
     return DESIGNATION_RANK.get(designation, 99)
 
+
+
+
 @admin_bp.route("/dashboard")
 @login_required
 @admin_required
 def dashboard():
-    db = SessionLocal()
+    global _DASHBOARD_CACHE, _DASHBOARD_CACHE_TIME
+
     today = __import__("datetime").date.today().strftime("%Y-%m-%d")
 
-    # সব রেকর্ড আনো
-    all_today_records = db.query(Attendance).filter(
-        Attendance.date == today
-    ).all()
+    # Cache check — ৬০ সেকেন্ডের মধ্যে একই দিনের data থাকলে সরাসরি return
+    now = time.time()
+    if _DASHBOARD_CACHE and (now - _DASHBOARD_CACHE_TIME) < CACHE_TTL and _DASHBOARD_CACHE.get("today") == today:
+        return render_template("admin/dashboard.html", **_DASHBOARD_CACHE)
 
-    # স্টুডেন্টদের সেশন (বড় থেকে ছোট) এবং রোল (ছোট থেকে বড়) অনুযায়ী সাজানোর লজিক
-    def student_obj_sort_key(r):
-        sec = r.section if r.section else "0-0"
-        try: 
-            first_year = int(sec.split("-")[0])
-        except: 
-            first_year = 0
-        return (-first_year, r.roll_number if r.roll_number else "")
+    db = SessionLocal()
+    try:
+        all_today_records = db.query(Attendance).filter(
+            Attendance.date == today
+        ).all()
 
-    student_records = sorted(
-        [r for r in all_today_records if r.role == "student"],
-        key=student_obj_sort_key
-    )
-    
-    teacher_records = sorted(
-        [r for r in all_today_records if r.role == "teacher"],
-        key=lambda x: get_teacher_rank(x.section)
-    )
-    
-    today_records = student_records + teacher_records
+        def student_obj_sort_key(r):
+            sec = r.section if r.section else "0-0"
+            try:
+                first_year = int(sec.split("-")[0])
+            except:
+                first_year = 0
+            return (-first_year, r.roll_number if r.roll_number else "")
 
-    students_list = load_students_from_excel()
-    total_students = len(students_list)
-    today_present = len(student_records)
-    today_absent = total_students - today_present
-    sections = sorted(list(set([s["section"] for s in students_list if s.get("section")])))
+        student_records = sorted(
+            [r for r in all_today_records if r.role == "student"],
+            key=student_obj_sort_key
+        )
 
-    # St স্টুডেন্টদের Absent list-ও সেশন এবং রোল অনুযায়ী সাজানো
-    def student_dict_sort_key(s):
-        sec = s.get("section", "0-0")
-        try: 
-            first_year = int(sec.split("-")[0])
-        except: 
-            first_year = 0
-        return (-first_year, s.get("roll", ""))
+        teacher_records = sorted(
+            [r for r in all_today_records if r.role == "teacher"],
+            key=lambda x: get_teacher_rank(x.section)
+        )
 
-    present_rolls = [r.roll_number for r in student_records]
-    absent_students = [s for s in students_list if s.get("roll") not in present_rolls]
-    absent_students = sorted(absent_students, key=student_dict_sort_key)
-    
-    # Teacher Absent list
-    from database import load_teachers_from_excel
-    teachers_list = load_teachers_from_excel()
-    present_teacher_names = [r.name for r in teacher_records]
-    absent_teachers = [t for t in teachers_list if t.get("name") not in present_teacher_names]
-    absent_teachers = sorted(absent_teachers, key=lambda x: get_teacher_rank(x.get("designation", "")))
+        today_records = student_records + teacher_records
 
-    # =========================================================================
-    # OPTIMIZATION 1: Low attendance alert এক কোয়েরিতে আনা (Group By)
-    # =========================================================================
-    all_dates = db.query(Attendance.date).filter(Attendance.role == "student").distinct().all()
-    total_days = len(all_dates)
+        students_list = load_students_from_excel()
+        total_students = len(students_list)
+        today_present = len(student_records)
+        today_absent = total_students - today_present
+        sections = sorted(list(set([s["section"] for s in students_list if s.get("section")])))
 
-    low_attendance = []
-    if total_days > 0:
-        # লুপের বাইরে একবারে সব স্টুডেন্টের উপস্থিতির সংখ্যা গুনে আনা হলো
-        attendance_results = db.query(Attendance.roll_number, func.count(Attendance.id))\
-            .filter(Attendance.role == "student")\
-            .group_by(Attendance.roll_number).all()
-        
-        # দ্রুত খোঁজার জন্য ডিকশনারিতে রূপান্তর {'roll': count}
-        attendance_counts = {row[0]: row[1] for row in attendance_results}
+        def student_dict_sort_key(s):
+            sec = s.get("section", "0-0")
+            try:
+                first_year = int(sec.split("-")[0])
+            except:
+                first_year = 0
+            return (-first_year, s.get("roll", ""))
 
-        for student in students_list:
-            student_roll = student.get("roll")
-            present_count = attendance_counts.get(student_roll, 0)
-            
-            percentage = round((present_count / total_days * 100), 1)
-            if percentage < 70:
-                low_attendance.append({
-                    "roll": student_roll,
-                    "name": student.get("name"),
-                    "section": student.get("section"),
-                    "percentage": percentage,
-                    "present": present_count,
-                    "total": total_days
-                })
+        present_rolls = [r.roll_number for r in student_records]
+        absent_students = sorted(
+            [s for s in students_list if s.get("roll") not in present_rolls],
+            key=student_dict_sort_key
+        )
 
-    # =========================================================================
-    # OPTIMIZATION 2: চার্টের শেষ ৭ দিনের ডেটা এক কোয়েরিতে আনা
-    # =========================================================================
-    from datetime import datetime, timedelta
-    chart_labels = []
-    chart_present = []
-    chart_absent = []
+        from database import load_teachers_from_excel
+        teachers_list = load_teachers_from_excel()
+        present_teacher_names = [r.name for r in teacher_records]
+        absent_teachers = sorted(
+            [t for t in teachers_list if t.get("name") not in present_teacher_names],
+            key=lambda x: get_teacher_rank(x.get("designation", ""))
+        )
 
-    # শেষ ৭ দিনের শুরুর তারিখ বের করা
-    start_date = (datetime.today() - timedelta(days=6)).strftime("%Y-%m-%d")
-    
-    # লুপ ছাড়া একবারে ৭ দিনের ডেটা গ্রুপ বাই করে আনা হলো
-    chart_results = db.query(Attendance.date, func.count(Attendance.roll_number.distinct()))\
-        .filter(Attendance.date >= start_date, Attendance.role == "student")\
-        .group_by(Attendance.date).all()
-        
-    chart_counts = {row[0]: row[1] for row in chart_results}
+        all_dates = db.query(Attendance.date).filter(Attendance.role == "student").distinct().all()
+        total_days = len(all_dates)
 
-    for i in range(6, -1, -1):
-        day = (datetime.today() - timedelta(days=i)).strftime("%Y-%m-%d")
-        day_label = (datetime.today() - timedelta(days=i)).strftime("%d %b")
-        
-        present = chart_counts.get(day, 0)
-        absent = total_students - present
-        
-        chart_labels.append(day_label)
-        chart_present.append(present)
-        chart_absent.append(absent)
+        low_attendance = []
+        if total_days > 0:
+            attendance_results = db.query(Attendance.roll_number, func.count(Attendance.id))\
+                .filter(Attendance.role == "student")\
+                .group_by(Attendance.roll_number).all()
 
-    db.close()
-    
-    # রিটার্নে ড্রপডাউনের জন্য স্টুডেন্ট ও শিক্ষকদের লিস্ট যোগ করা হলো
-    return render_template("admin/dashboard.html",
+            attendance_counts = {row[0]: row[1] for row in attendance_results}
+
+            for student in students_list:
+                student_roll = student.get("roll")
+                present_count = attendance_counts.get(student_roll, 0)
+                percentage = round((present_count / total_days * 100), 1)
+                if percentage < 70:
+                    low_attendance.append({
+                        "roll": student_roll,
+                        "name": student.get("name"),
+                        "section": student.get("section"),
+                        "percentage": percentage,
+                        "present": present_count,
+                        "total": total_days
+                    })
+
+        from datetime import datetime, timedelta
+        chart_labels = []
+        chart_present = []
+        chart_absent = []
+
+        start_date = (datetime.today() - timedelta(days=6)).strftime("%Y-%m-%d")
+
+        chart_results = db.query(Attendance.date, func.count(Attendance.roll_number.distinct()))\
+            .filter(Attendance.date >= start_date, Attendance.role == "student")\
+            .group_by(Attendance.date).all()
+
+        chart_counts = {row[0]: row[1] for row in chart_results}
+
+        for i in range(6, -1, -1):
+            day = (datetime.today() - timedelta(days=i)).strftime("%Y-%m-%d")
+            day_label = (datetime.today() - timedelta(days=i)).strftime("%d %b")
+            present = chart_counts.get(day, 0)
+            chart_labels.append(day_label)
+            chart_present.append(present)
+            chart_absent.append(total_students - present)
+
+    finally:
+        db.close()
+
+    # Cache এ save করো
+    _DASHBOARD_CACHE = dict(
         today_records=today_records,
         total_students=total_students,
         today_present=today_present,
@@ -158,14 +160,17 @@ def dashboard():
         sections=sections,
         today=today,
         absent_students=absent_students,
-        absent_teachers=absent_teachers, 
+        absent_teachers=absent_teachers,
         low_attendance=low_attendance,
         chart_labels=chart_labels,
         chart_present=chart_present,
         chart_absent=chart_absent,
-        all_registered_students=students_list, # ফ্রন্টএন্ড ড্রপডাউন ডেটা ১
-        all_registered_teachers=teachers_list   # ফ্রন্টএন্ড ড্রপডাউন ডেটা ২
+        all_registered_students=students_list,
+        all_registered_teachers=teachers_list
     )
+    _DASHBOARD_CACHE_TIME = now
+
+    return render_template("admin/dashboard.html", **_DASHBOARD_CACHE)
 
 @admin_bp.route("/attendance")
 @login_required
