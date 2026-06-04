@@ -590,6 +590,7 @@ def export_percentage():
 @login_required
 @admin_required
 def manual_attendance():
+    global _DASHBOARD_CACHE  # ← একদম শুরুতে
     from database import SessionLocal, Attendance, load_students_from_excel, load_teachers_from_excel
     from flask import request, flash, redirect, url_for
     from datetime import datetime
@@ -626,7 +627,6 @@ def manual_attendance():
                     db.add(new_record)
                     count += 1
             db.commit()
-            global _DASHBOARD_CACHE
             _DASHBOARD_CACHE = {}
             flash(f"সফলভাবে মোট {count} জন শিক্ষার্থীর বাল্ক হাজিরা নেওয়া হয়েছে।", "success")
         
@@ -669,7 +669,6 @@ def manual_attendance():
                 )
                 db.add(new_record)
                 db.commit()
-                global _DASHBOARD_CACHE
                 _DASHBOARD_CACHE = {}
                 flash(f"সফলভাবে {target_name} এর ম্যানুয়াল হাজিরা নেওয়া হয়েছে।", "success")
 
