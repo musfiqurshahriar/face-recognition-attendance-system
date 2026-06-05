@@ -1,4 +1,5 @@
 import smtplib
+import ssl
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from database import SessionLocal, Attendance, load_students_from_excel
@@ -11,7 +12,6 @@ load_dotenv()
 SENDER_EMAIL = os.getenv("SENDER_EMAIL")
 SENDER_NAME = "Face Recognition Attendance System"
 BREVO_SMTP = os.getenv("BREVO_SMTP")
-BREVO_PORT = int(os.getenv("BREVO_PORT", 587))
 BREVO_LOGIN = os.getenv("BREVO_LOGIN")
 BREVO_PASSWORD = os.getenv("BREVO_PASSWORD")
 
@@ -23,12 +23,10 @@ def send_email(to_email, subject, body):
         msg["To"] = to_email
         msg["Subject"] = subject
         msg["Reply-To"] = SENDER_EMAIL
-
         msg.attach(MIMEText(body, "html", "utf-8"))
 
-        server = smtplib.SMTP(BREVO_SMTP, BREVO_PORT)
-        server.ehlo()
-        server.starttls()
+        context = ssl.create_default_context()
+        server = smtplib.SMTP_SSL(BREVO_SMTP, 465, context=context)
         server.login(BREVO_LOGIN, BREVO_PASSWORD)
         server.sendmail(SENDER_EMAIL, to_email, msg.as_string())
         server.quit()
