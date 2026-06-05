@@ -8,16 +8,74 @@ import json
 import os
 
 ENCODINGS_FILE = "../models/encodings.pkl"
-OFFLINE_FILE = "offline_queue.json"  
+OFFLINE_FILE = "offline_queue.json"
 
-# টলারেন্স কমিয়ে ০.৪৫ করা হলো যেন ভুল ফেস ম্যাচ (False Positive) না হয়
 TOLERANCE = 0.45
 CURRENT_SEMESTER = None
-#লোকাল ফ্লাস্ক সার্ভারের ঠিকানা
 
-#SERVER_URL = "http://127.0.0.1:5000/api/mark-attendance" # লোকাল টেস্টিংয়ের জন্য
-# আপনার লাইভ সার্ভারের লিংক
 SERVER_URL = "https://face-recognition-attendance-system-yuhz.onrender.com/api/mark-attendance"
+
+# ==========================================
+# Anti-Spoof Function
+# ==========================================
+def is_real_face(face_img):
+    """
+    True = real face, False = spoof (photo/screen)
+    """
+    try:
+        if face_img is None or face_img.size == 0:
+            return True
+
+        gray = cv2.cvtColor(face_img, cv2.COLOR_BGR2GRAY)
+        h, w = gray.shape
+
+        if h < 20 or w < 20:
+            return True  # too small to analyze
+
+        # Laplacian variance — real face এ বেশি texture
+        laplacian_var = cv2.Laplacian(gray, cv2.CV_64F).var()
+
+        # Gradient analysis
+        grad_x = cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize=3)
+        grad_y = cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize=3)
+        gradient_mean = np.mean(np.sqrt(grad_x**2 + grad_y**2))
+
+        # Real face: laplacian > 30 এবং gradient > 8
+        if laplacian_var < 30 or gradient_mean < 8:
+            return False  # spoof detected
+
+        return True
+
+    except Exception as e:
+        print(f"[WARNING] Anti-spoof check failed: {e}")
+        return True
+
+
+# ==========================================
+# Camera Selection
+# ==========================================
+print("=" * 40)
+print("  ক্যামেরা সিলেক্ট করুন:")
+print("  1. PC Webcam")
+print("  2. Phone Camera (IP Webcam)")
+print("=" * 40)
+choice = input("আপনার choice (1 বা 2): ").strip()
+
+if choice == "2":
+    ip = input("Phone এর IP address দিন (যেমন: 192.168.1.5): ").strip()
+    port = input("Port দিন (default 8080, Enter চাপলে 8080): ").strip()
+    if not port:
+        port = "8080"
+    camera_url = f"http://{ip}:{port}/video"
+    print(f"[INFO] Phone camera connect হচ্ছে: {camera_url}")
+    cap = cv2.VideoCapture(camera_url)
+else:
+    print("[INFO] PC Webcam চালু হচ্ছে...")
+    cap = cv2.VideoCapture(0)
+
+if not cap.isOpened():
+    print("[ERROR] ক্যামেরা খুলতে পারেনি! IP বা connection চেক করুন।")
+    exit()
 
 print("[INFO] Encoding লোড হচ্ছে...")
 with open(ENCODINGS_FILE, "rb") as f:
@@ -30,7 +88,8 @@ known_roles = data["roles"]
 ROLE_COLORS = {
     "students": (0, 255, 0),
     "teachers": (255, 165, 0),
-    "Unknown":  (0, 0, 255)
+    "Unknown":  (0, 0, 255),
+    "Spoof":    (0, 0, 255)
 }
 
 already_marked = set()
@@ -47,7 +106,7 @@ def save_offline(payload):
                 queue = json.load(f)
         except:
             pass
-            
+
     if payload not in queue:
         queue.append(payload)
         with open(OFFLINE_FILE, "w") as f:
@@ -56,19 +115,16 @@ def save_offline(payload):
 def sync_offline():
     if not os.path.exists(OFFLINE_FILE):
         return
-
     try:
         with open(OFFLINE_FILE, "r") as f:
             queue = json.load(f)
     except:
         return
-
     if not queue:
         return
 
     print(f"\n[INFO] ইন্টারনেট পাওয়া গেছে! {len(queue)} টি অফলাইন ডেটা আপলোড হচ্ছে...")
     unsynced = []
-    
     for payload in queue:
         try:
             res = requests.post(SERVER_URL, json=payload, timeout=10)
@@ -81,24 +137,23 @@ def sync_offline():
     if unsynced:
         with open(OFFLINE_FILE, "w") as f:
             json.dump(unsynced, f, indent=4)
-        print(f"[INFO] {len(unsynced)} টি ডেটা আপলোড করা যায়নি। পরে আবার চেষ্টা করা হবে।")
+        print(f"[INFO] {len(unsynced)} টি ডেটা আপলোড করা যায়নি।")
     else:
         if os.path.exists(OFFLINE_FILE):
             os.remove(OFFLINE_FILE)
-        print("[INFO] সব অফলাইন ডেটা সফলভাবে ক্লাউডে আপলোড হয়েছে!\n")
+        print("[INFO] সব অফলাইন ডেটা সফলভাবে আপলোড হয়েছে!\n")
+
 
 # ==========================================
 # Main Camera Loop
 # ==========================================
-cap = cv2.VideoCapture(0)
 print("[INFO] ক্যামেরা চালু। বন্ধ করতে 'q' চাপুন।")
-
-# ক্যামেরা চালুর সাথে সাথেই একবার অফলাইন ডেটাগুলো সিঙ্ক করে নেবে!
 sync_offline()
 
 while True:
     ret, frame = cap.read()
     if not ret:
+        print("[ERROR] ফ্রেম পাওয়া যাচ্ছে না!")
         break
 
     small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
@@ -111,9 +166,30 @@ while True:
     face_roles = []
     face_statuses = []
 
-    for face_encoding in face_encodings:
-        # কঠোর ম্যাচিং সিস্টেম
-        matches = face_recognition.compare_faces(known_encodings, face_encoding, tolerance=TOLERANCE)
+    for face_encoding, face_location in zip(face_encodings, face_locations):
+
+        # ==========================================
+        # Anti-Spoof Check
+        # ==========================================
+        top, right, bottom, left = face_location
+        top *= 4; right *= 4; bottom *= 4; left *= 4
+
+        face_img = frame[top:bottom, left:right]
+        real = is_real_face(face_img)
+
+        if not real:
+            face_names.append("Spoof!")
+            face_roles.append("Spoof")
+            face_statuses.append("FAKE DETECTED")
+            print("[ALERT] ⚠️ Spoof attempt detected!")
+            continue
+
+        # ==========================================
+        # Face Recognition
+        # ==========================================
+        matches = face_recognition.compare_faces(
+            known_encodings, face_encoding, tolerance=TOLERANCE
+        )
         name = "Unknown"
         role = "Unknown"
 
@@ -121,8 +197,6 @@ while True:
 
         if len(face_distances) > 0:
             best_match_index = np.argmin(face_distances)
-            
-            # ডাবল ভেরিফিকেশন: ম্যাচ ট্রু হতে হবে এবং ডিসটেন্স অবশ্যই টলারেন্সের নিচে থাকতে হবে
             if matches[best_match_index] and face_distances[best_match_index] <= TOLERANCE:
                 name = known_names[best_match_index]
                 role = known_roles[best_match_index]
@@ -135,14 +209,11 @@ while True:
                 "role": role.rstrip("s"),
                 "semester": CURRENT_SEMESTER
             }
-            
             try:
                 response = requests.post(SERVER_URL, json=payload, timeout=10)
-                
                 if response.status_code == 200:
                     result_data = response.json()
                     db_status = result_data.get("status")
-                    
                     if db_status == "duplicate":
                         status = "Already Marked"
                         already_marked.add(name)
@@ -151,16 +222,13 @@ while True:
                         already_marked.add(name)
                     else:
                         status = "Failed"
-                        
                     sync_offline()
-                    
                 else:
                     status = f"Server Error ({response.status_code})"
-                    
-            except requests.exceptions.RequestException as e:
+            except requests.exceptions.RequestException:
                 status = "Saved Offline"
                 save_offline(payload)
-                already_marked.add(name) 
+                already_marked.add(name)
 
         if name not in already_printed and name != "Unknown":
             print(f"[INFO] {name} | {status}")
@@ -170,12 +238,12 @@ while True:
         face_roles.append(role)
         face_statuses.append(status)
 
+    # ==========================================
+    # Display
+    # ==========================================
     for (top, right, bottom, left), name, role, status in zip(
             face_locations, face_names, face_roles, face_statuses):
-        top *= 4
-        right *= 4
-        bottom *= 4
-        left *= 4
+        top *= 4; right *= 4; bottom *= 4; left *= 4
 
         color = ROLE_COLORS.get(role, (0, 0, 255))
         label = f"{name} | {status}" if status else name
