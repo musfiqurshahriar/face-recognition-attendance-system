@@ -264,16 +264,17 @@ def percentage():
         Attendance.role == "student"
     ).distinct().count()
 
+    # একবারে সব student এর attendance count আনো
+    attendance_results = db.query(Attendance.roll_number, func.count(Attendance.id))\
+        .filter(Attendance.role == "student")\
+        .group_by(Attendance.roll_number).all()
+    
+    attendance_counts = {row[0]: row[1] for row in attendance_results}
+
     result = []
     for student in students:
         student_roll = student.get("roll")
-        count_query = db.query(Attendance).filter(
-            Attendance.role == "student",
-            Attendance.roll_number == student_roll
-        )
-        if semester:
-            count_query = count_query.filter(Attendance.semester == semester)
-        present_count = count_query.count()
+        present_count = attendance_counts.get(student_roll, 0)
         percentage = round((present_count / total_days * 100), 1) if total_days > 0 else 0
         result.append({
             "roll": student_roll,
@@ -296,7 +297,6 @@ def percentage():
         selected_section=section,
         selected_semester=semester
     )
-
 
 @admin_bp.route("/export/excel")
 @login_required
