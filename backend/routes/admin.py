@@ -187,6 +187,11 @@ def attendance():
     section = request.args.get("section", "")
     semester = request.args.get("semester", "")
 
+    # Default: শুধু শেষ ৭ দিনের data দেখাবে
+    if not date_from and not date_to:
+        from datetime import timedelta
+        date_from = (datetime.today() - timedelta(days=7)).strftime("%Y-%m-%d")
+
     s_query = db.query(Attendance).filter(Attendance.role == "student")
     t_query = db.query(Attendance).filter(Attendance.role == "teacher")
 
@@ -202,12 +207,12 @@ def attendance():
         s_query = s_query.filter(Attendance.semester == semester)
 
     student_records = s_query.order_by(
-        Attendance.date,
+        Attendance.date.desc(),
         Attendance.section.desc(),
         Attendance.roll_number
-    ).all()
+    ).limit(500).all()  # ← সর্বোচ্চ ৫০০ record
 
-    all_teacher_records = t_query.all()
+    all_teacher_records = t_query.limit(100).all()  # ← সর্বোচ্চ ১০০ record
     teacher_records = sorted(
         all_teacher_records,
         key=lambda x: (x.date, get_teacher_rank(x.section))
