@@ -454,6 +454,7 @@ def send_notifications():
         "success"
     )
     return redirect(url_for("admin.dashboard"))
+
 @admin_bp.route("/upload-students", methods=["GET", "POST"])
 @login_required
 @admin_required

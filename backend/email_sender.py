@@ -25,8 +25,11 @@ def send_email(to_email, subject, body):
         msg["Reply-To"] = SENDER_EMAIL
         msg.attach(MIMEText(body, "html", "utf-8"))
 
+        BREVO_PORT = int(os.getenv("BREVO_PORT", 587))
+
         context = ssl.create_default_context()
-        server = smtplib.SMTP_SSL(BREVO_SMTP, 465, context=context)
+        server = smtplib.SMTP(BREVO_SMTP, BREVO_PORT)
+        server.starttls(context=context)
         server.login(BREVO_LOGIN, BREVO_PASSWORD)
         server.sendmail(SENDER_EMAIL, to_email, msg.as_string())
         server.quit()
