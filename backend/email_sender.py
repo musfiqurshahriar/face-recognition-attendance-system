@@ -1,11 +1,12 @@
 import smtplib
 import ssl
+import os
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from database import SessionLocal, Attendance, load_students_from_excel
 from dotenv import load_dotenv
-import os
 from datetime import date
+import requests as http_requests
 
 load_dotenv()
 
@@ -18,26 +19,32 @@ BREVO_PASSWORD = os.getenv("BREVO_PASSWORD")
 
 def send_email(to_email, subject, body):
     try:
-        msg = MIMEMultipart("alternative")
-        msg["From"] = f"{SENDER_NAME} <{SENDER_EMAIL}>"
-        msg["To"] = to_email
-        msg["Subject"] = subject
-        msg["Reply-To"] = SENDER_EMAIL
-        msg.attach(MIMEText(body, "html", "utf-8"))
-
-        BREVO_PORT = int(os.getenv("BREVO_PORT", 587))
-
-        context = ssl.create_default_context()
-        server = smtplib.SMTP(BREVO_SMTP, BREVO_PORT)
-        server.starttls(context=context)
-        server.login(BREVO_LOGIN, BREVO_PASSWORD)
-        server.sendmail(SENDER_EMAIL, to_email, msg.as_string())
-        server.quit()
-        return True
+        api_key = os.getenv("BREVO_API_KEY")
+        
+        response = http_requests.post(
+            "https://api.brevo.com/v3/smtp/email",
+            headers={
+                "api-key": api_key,
+                "Content-Type": "application/json"
+            },
+            json={
+                "sender": {"name": SENDER_NAME, "email": SENDER_EMAIL},
+                "to": [{"email": to_email}],
+                "subject": subject,
+                "htmlContent": body
+            },
+            timeout=30
+        )
+        
+        if response.status_code == 201:
+            return True
+        else:
+            print(f"[ERROR] Brevo API error: {response.text}")
+            return False
+            
     except Exception as e:
         print(f"[ERROR] Email পাঠানো যায়নি {to_email} — {e}")
         return False
-
 
 def send_absent_notifications(target_date=None):
     if not target_date:
