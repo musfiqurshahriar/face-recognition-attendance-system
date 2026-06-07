@@ -435,22 +435,18 @@ def export_excel():
 @login_required
 @admin_required
 def send_notifications():
-    import threading
     from email_sender import send_absent_notifications
     target_date = request.form.get("date", "")
     if not target_date:
         from datetime import date
         target_date = date.today().strftime("%Y-%m-%d")
 
-    def send_in_background(date):
-        send_absent_notifications(date)
-
-    thread = threading.Thread(target=send_in_background, args=(target_date,))
-    thread.daemon = True
-    thread.start()
-
+    result = send_absent_notifications(target_date)
+    
     flash(
-        f"{target_date} তারিখের অনুপস্থিত সবার guardian কে email পাঠানো শুরু হয়েছে।",
+        f"{target_date} তারিখের মোট {result['total_absent']} জন অনুপস্থিত — "
+        f"{result['success']} জনকে email পাঠানো হয়েছে, "
+        f"{result['failed']} জন failed।",
         "success"
     )
     return redirect(url_for("admin.dashboard"))
